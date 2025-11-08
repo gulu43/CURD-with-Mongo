@@ -3,7 +3,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import { __dirname, publicPath, dotenvPath } from './paths.utils.js'
 import conHelperFn, { con, User } from './db_connection.js'
-import { deleteUserFn, insertUserFn, updatePasswordFn } from './controller.js'
+import { deleteUserFn, finduserFn, insertUserFn, updatePasswordFn } from './controller.js'
 
 const app = express()
 
@@ -36,6 +36,7 @@ app.get('/', (req, res) => {
 app.post('/register', insertUserFn)
 app.patch('/updatepassword', updatePasswordFn)
 app.delete('/deleteaccount', deleteUserFn)
+app.get('/getuser', finduserFn)
 
 
 
