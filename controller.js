@@ -88,3 +88,44 @@ export const updatePasswordFn = async (req, res) => {
             })
     }
 }
+
+export const deleteUserFn = async (req, res) => {
+    const { usersname } = req.body
+    if (!usersname) {
+        return res
+            .status(400)
+            .json({
+                message: `feield/s should not be empty`
+            })
+    }
+
+    try {
+        result = await User.findOne({ usersname })
+        const _id = result._id
+        console.log("users id: ", _id);
+
+        if (!result) {
+            return res
+                .status(404)
+                .json({ message: 'User does not exsist' })
+        }
+        result = await User.deleteOne({ _id })
+        // console.log("see: ", result);
+
+        if (result.acknowledged == true && result.deletedCount == 1) {
+            return res
+                .status(201)
+                .json({ message: 'User deleted sucess' })
+        } else {
+            return res
+                .status(400)
+                .json({ message: 'User deleted faild' })
+        }
+    } catch (error) {
+        res
+            .status(500)
+            .json({
+                message: error?.message || 'Something went wrong white deleting',
+            })
+    }
+}
