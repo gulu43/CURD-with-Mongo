@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { type } from 'os'
 
 const usersSchema = new mongoose.Schema({
     name: {
@@ -30,6 +31,14 @@ const usersSchema = new mongoose.Schema({
         type: Boolean,
         required: true,
         default: true
+
+    },
+    refreshToken: {
+        type: String
+
+    },
+    accessToken: {
+        type: String
 
     }
 
