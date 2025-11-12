@@ -16,6 +16,31 @@ let accessToken;
 let refreshToken;
 let hashedPassword;
 
+// export const generateAccessTokenFn = async (req, res) => {}
+
+export const refreshTokenFn = async (req, res) => {
+    const refreshToken = req.headers.refreshToken
+    if (!refreshToken) return res.status(422).json({ message: 'refresh token not found, login again.' }).redirect('/login')
+    jwt.verify(refreshToken, process.env.SECRET, async (err, decode) => {
+        if (err) {
+            return res.status(400).json({ message: `Error while verifying the token: ${err}.` }).redirect('/login')
+        }
+        else if (err == 'TokenExpiredError') {
+            return res.status(400).json({ message: `refresh token expired, login again. ${err}.` }).redirect('/login')
+        }
+        else {
+            result = await User.findOne(refreshToken)
+            if (result.refreshToken) {
+                accessToken = jwt.sign({ users_id: result._id }, { expiresIn: '1h' }, process.env.SECRET)
+                return res.status(201).json({ message: 'accessToken refresh and send', accessToken: accessToken })
+            } else {
+                return res.status(404).json({ message: 'accessToken refresh not found in db', accessToken: accessToken })
+
+            }
+        }
+    })
+}
+
 export const homeUserFn = async (req, res) => {
     console.log("home end point")
 
@@ -54,15 +79,10 @@ export const loginUserFn = async (req, res) => {
                 })
         }
         else if (checkPassword == true) {
-            console.log('logedin and assign two token')
+            console.log('logedin ')
 
-            accessToken = jwt.sign({ users_id: result._id }, { expiresIn: '1h' }, process.env.SECRET) // accessToken 
-            refreshToken = jwt.sign({ users_id: result._id }, { expiresIn: '7d' }, process.env.SECRET) // refreshToken
-
-            console.log('refreshToken: ', refreshToken)
-            console.log('accessToken: ', accessToken)
-
-            result = await User.UpdateByID({ _id: result._id }, { $set: { refreshToken: refreshToken } })
+            accessToken = jwt.sign({ users_id: result._id }, { expiresIn: '1h' }, process.env.SECRET)
+            refreshToken = jwt.sign({ users_id: result._id }, { expiresIn: '7d' }, process.env.SECRET)
 
             return res
                 .status(200)
@@ -70,7 +90,6 @@ export const loginUserFn = async (req, res) => {
                     message: `You logedin!`,
                     accessToken: accessToken,
                     refreshToken: refreshToken
-
                 })
 
         } else {
