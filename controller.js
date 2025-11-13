@@ -54,6 +54,8 @@ export const homeUserFn = async (req, res) => {
 export const loginUserFn = async (req, res) => {
     try {
         const { usersname, password } = req.body
+        console.log("from user: --------", usersname, password);
+
         if (!usersname || !password) {
             return res
                 .status(422)
@@ -70,7 +72,9 @@ export const loginUserFn = async (req, res) => {
                     message: `User does not exists, Please register first`
                 })
         }
-        const checkPassword = bcrypt.compare(result.password, password)
+        const checkPassword = await bcrypt.compare(password, result.password)
+        console.log('did it mached: ------', checkPassword);
+
         if (checkPassword && result.status == false) {
             return res
                 .status(422)
@@ -80,9 +84,10 @@ export const loginUserFn = async (req, res) => {
         }
         else if (checkPassword == true) {
             console.log('logedin ')
-
-            accessToken = jwt.sign({ users_id: result._id }, { expiresIn: '1h' }, process.env.SECRET)
-            refreshToken = jwt.sign({ users_id: result._id }, { expiresIn: '7d' }, process.env.SECRET)
+            // console.log('result_id: -',result._id);
+            
+            accessToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '1h' })
+            refreshToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '7d' })
 
             return res
                 .status(200)

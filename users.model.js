@@ -34,12 +34,8 @@ const usersSchema = new mongoose.Schema({
 
     },
     refreshToken: {
-        type: String
-
-    },
-    accessToken: {
-        type: String
-
+        type: String,
+        default: ""
     }
 
 }, { timestamps: true })
