@@ -19,22 +19,32 @@ let hashedPassword;
 // export const generateAccessTokenFn = async (req, res) => {}
 
 export const refreshTokenFn = async (req, res) => {
-    const refreshToken = req.headers.refreshToken
-    if (!refreshToken) return res.status(422).json({ message: 'refresh token not found, login again.' }).redirect('/login')
-    jwt.verify(refreshToken, process.env.SECRET, async (err, decode) => {
+    // console.log('refresh hit');
+    // console.log('req---: ', req);
+    // console.log('header: ', req.headers.refreshtoken);
+
+    const refreshtoken_ = req.headers.refreshtoken;
+    // console.log('refreshToken: ', refreshtoken_);
+
+    if (!refreshtoken_) return res.status(404).json({ message: 'refresh token not found, login again.' })
+
+    jwt.verify(refreshtoken_, process.env.SECRET, async (err, decode) => {
         if (err) {
-            return res.status(400).json({ message: `Error while verifying the token: ${err}.` }).redirect('/login')
+            return res.status(400).json({ message: `Error while verifying the token: ${err}.` })
         }
         else if (err == 'TokenExpiredError') {
-            return res.status(400).json({ message: `refresh token expired, login again. ${err}.` }).redirect('/login')
+            return res.status(400).json({ message: `refresh token expired, login again. ${err}.` })
         }
         else {
-            result = await User.findOne(refreshToken)
+            console.log(checkConnection(con))
+            result = await User.findOne({ refreshToken: refreshtoken_ }).exec()
+            // console.log('result  in refresh: ---------- ', result.refreshToken);
+
             if (result.refreshToken) {
-                accessToken = jwt.sign({ users_id: result._id }, { expiresIn: '1h' }, process.env.SECRET)
+                accessToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '1h' })
                 return res.status(201).json({ message: 'accessToken refresh and send', accessToken: accessToken })
             } else {
-                return res.status(404).json({ message: 'accessToken refresh not found in db', accessToken: accessToken })
+                return res.status(404).json({ message: 'accessToken refresh not found in db, login in again.' })
 
             }
         }
@@ -54,7 +64,7 @@ export const homeUserFn = async (req, res) => {
 export const loginUserFn = async (req, res) => {
     try {
         const { usersname, password } = req.body
-        console.log("from user: --------", usersname, password);
+        // console.log("from user: --------", usersname, password);
 
         if (!usersname || !password) {
             return res
@@ -73,7 +83,7 @@ export const loginUserFn = async (req, res) => {
                 })
         }
         const checkPassword = await bcrypt.compare(password, result.password)
-        console.log('did it mached: ------', checkPassword);
+        // console.log('did it mached: ------', checkPassword);
 
         if (checkPassword && result.status == false) {
             return res
@@ -83,16 +93,21 @@ export const loginUserFn = async (req, res) => {
                 })
         }
         else if (checkPassword == true) {
-            console.log('logedin ')
+            // console.log('logedin! ')
             // console.log('result_id: -',result._id);
-            
+
             accessToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '1h' })
             refreshToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '7d' })
+
+            result = await User.updateOne({ _id: result._id }, { $set: { refreshToken: refreshToken } })
+            // console.log('update the refresh token in db: ', result.refreshToken);
 
             return res
                 .status(200)
                 .json({
                     message: `You logedin!`,
+                    matchedCount: result.matchedCount,
+                    modifiedCount: result.modifiedCount,
                     accessToken: accessToken,
                     refreshToken: refreshToken
                 })
@@ -114,8 +129,8 @@ export const loginUserFn = async (req, res) => {
 }
 
 export const middlewareAuth = async (req, res, next) => {
-    accessToken = req.headers['accessToken']
-    refreshToken = req.headers['refreshToken']
+    accessToken = req.headers['accesstoken']
+    refreshToken = req.headers['refreshtoken']
 
     if (!accessToken) {
         return res
