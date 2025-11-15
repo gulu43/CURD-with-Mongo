@@ -5,6 +5,7 @@ import { dotenvPath } from "./paths.utils.js"
 import dotenv from 'dotenv'
 import { error } from "console";
 import bcrypt from "bcryptjs";
+import { decode } from "punycode";
 // how to db and collection code plz
 
 dotenv.config({
@@ -33,7 +34,7 @@ export const refreshTokenFn = async (req, res) => {
             return res.status(400).json({ message: `Error while verifying the token: ${err}.` })
         }
         else if (err == 'TokenExpiredError') {
-            return res.status(400).json({ message: `refresh token expired, login again. ${err}.` })
+            return res.status(401).json({ message: `refresh token expired, login again. ${err}.` })
         }
         else {
             console.log(checkConnection(con))
@@ -96,7 +97,7 @@ export const loginUserFn = async (req, res) => {
             // console.log('logedin! ')
             // console.log('result_id: -',result._id);
 
-            accessToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '1h' })
+            accessToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '10' })
             refreshToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '7d' })
 
             result = await User.updateOne({ _id: result._id }, { $set: { refreshToken: refreshToken } })
@@ -126,6 +127,25 @@ export const loginUserFn = async (req, res) => {
         })
     }
 
+}
+
+export const checkAccessTokenMiddleware = async (req, res, next) => {
+    console.log('middleware hit')
+
+    accessToken = req.headers.accesstoken
+    if (!accessToken) {
+        return res.status(404).json({ message: 'token not found' })
+    }
+    jwt.verify(accessToken, process.env.SECRET, (error, decode) => {
+        if (error == 'TokenExpiredError') {
+            return res.status(401).json({ message: 'Token is expired' })
+        }
+        if (error) {
+            return res.status(401).json({ message: 'Can not be verifyed token, login in again' })
+        }
+
+    })
+    next()
 }
 
 export const middlewareAuth = async (req, res, next) => {
@@ -332,7 +352,9 @@ export const deleteUserFn = async (req, res) => {
 export const finduserFn = async (req, res) => {
 
     const { usersname } = req.query
-    // console.log("checking: ", usersname)
+    console.log('what i am getting from users: ',usersname);
+    
+    console.log("finduser api hit")
 
     try {
         if (usersname) {
