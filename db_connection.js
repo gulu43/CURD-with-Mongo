@@ -1,11 +1,11 @@
 import mongoose, { createConnection, connect } from 'mongoose'
 import usersSchema from './users.model.js'
-import { dotenvPath } from './paths.utils.js'
+import './paths.utils.js'
 import dotenv from 'dotenv'
 
-dotenv.config({
-    path: dotenvPath
-})
+// dotenv.config({
+//     path: dotenvPath
+// })
 
 export const User = new mongoose.model('User', usersSchema, 'users')
 

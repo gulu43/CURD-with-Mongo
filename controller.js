@@ -1,16 +1,17 @@
 import conHelperFn, { User, con, checkConnection } from "./db_connection.js"
 import mongoose from 'mongoose'
 import jwt from "jsonwebtoken";
-import { dotenvPath } from "./paths.utils.js"
+import "./paths.utils.js"
 import dotenv from 'dotenv'
 import { error } from "console";
 import bcrypt from "bcryptjs";
 import { decode } from "punycode";
+import e from "cors";
 // how to db and collection code plz
 
-dotenv.config({
-    path: dotenvPath
-})
+// dotenv.config({
+//     path: dotenvPath
+// })
 
 let result;
 let accessToken;
@@ -24,32 +25,38 @@ export const refreshTokenFn = async (req, res) => {
     // console.log('req---: ', req);
     // console.log('header: ', req.headers.refreshtoken);
 
-    const refreshtoken_ = req.headers.refreshtoken;
-    // console.log('refreshToken: ', refreshtoken_);
+    try {
+        const refreshtoken_ = req.headers.refreshtoken;
+        // console.log('refreshToken: ', refreshtoken_);
 
-    if (!refreshtoken_) return res.status(404).json({ message: 'refresh token not found, login again.' })
+        if (!refreshtoken_) return res.status(404).json({ message: 'refresh token not found, login again.' })
 
-    jwt.verify(refreshtoken_, process.env.SECRET, async (err, decode) => {
-        if (err) {
-            return res.status(400).json({ message: `Error while verifying the token: ${err}.` })
-        }
-        else if (err == 'TokenExpiredError') {
-            return res.status(401).json({ message: `refresh token expired, login again. ${err}.` })
-        }
-        else {
-            console.log(checkConnection(con))
-            result = await User.findOne({ refreshToken: refreshtoken_ }).exec()
-            // console.log('result  in refresh: ---------- ', result.refreshToken);
-
-            if (result.refreshToken) {
-                accessToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '1h' })
-                return res.status(201).json({ message: 'accessToken refresh and send', accessToken: accessToken })
-            } else {
-                return res.status(404).json({ message: 'accessToken refresh not found in db, login in again.' })
-
+        jwt.verify(refreshtoken_, process.env.SECRET, async (err, decode) => {
+            if (err) {
+                return res.status(400).json({ message: `Error while verifying the token: ${err}.` })
             }
-        }
-    })
+            else if (err?.name == 'TokenExpiredError') {
+                return res.status(401).json({ message: `refresh token expired, login again. ${err}.` })
+            }
+            else {
+                console.log('connection check',checkConnection(con))
+                result = await User.findOne({ refreshToken: refreshtoken_ }).exec()
+                console.log('result  in refresh: ---------- ', result.refreshToken);
+
+                if (result.refreshToken) {
+                    accessToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '1m' })
+                    return res.status(201).json({ message: 'accessToken refresh and send', accessToken: accessToken })
+                } else {
+                    return res.status(404).json({ message: 'accessToken refresh not found in db, login in again.' })
+
+                }
+            }
+        })
+
+    } catch (error) {
+        console.log('error in refresh: ', error);
+
+    }
 }
 
 export const homeUserFn = async (req, res) => {
@@ -131,21 +138,22 @@ export const loginUserFn = async (req, res) => {
 
 export const checkAccessTokenMiddleware = async (req, res, next) => {
     console.log('middleware hit')
-
-    accessToken = req.headers.accesstoken
-    if (!accessToken) {
+// accesstoken
+    const accessToken_ = req.headers.accesstoken
+    if (!accessToken_) {
         return res.status(404).json({ message: 'token not found' })
     }
-    jwt.verify(accessToken, process.env.SECRET, (error, decode) => {
-        if (error == 'TokenExpiredError') {
-            return res.status(401).json({ message: 'Token is expired' })
+    jwt.verify(accessToken_, process.env.SECRET, (error, decoded) => {
+        if (error?.name == 'TokenExpiredError') {
+            return res.status(401).json({ message: 'middleware ,Token is expired',error })
         }
         if (error) {
-            return res.status(401).json({ message: 'Can not be verifyed token, login in again' })
+            return res.status(401).json({ message: 'middleware error, Can not be verifyed token, login in again: ',error })
         }
-
+        console.log(decoded);
+        next();
     })
-    next()
+    // next()
 }
 
 export const middlewareAuth = async (req, res, next) => {
@@ -200,7 +208,7 @@ export const middlewareAuth = async (req, res, next) => {
                     if (!result) {
                         console.log('testing:', result)
                     }
-                    accessToken = jwt.sign({ users_id: result._id }, { expiresIn: '1h' }, process.env.SECRET)
+                    accessToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '1h' })
                     return res
                         .status(200)
                         .json({
@@ -352,8 +360,8 @@ export const deleteUserFn = async (req, res) => {
 export const finduserFn = async (req, res) => {
 
     const { usersname } = req.query
-    console.log('what i am getting from users: ',usersname);
-    
+    console.log('what i am getting from users: ', usersname);
+
     console.log("finduser api hit")
 
     try {

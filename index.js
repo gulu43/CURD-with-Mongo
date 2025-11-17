@@ -1,7 +1,7 @@
 import express, { json, urlencoded } from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
-import { __dirname, publicPath, dotenvPath } from './paths.utils.js'
+import { __dirname, publicPath } from './paths.utils.js'
 import conHelperFn, { con, User } from './db_connection.js'
 import { deleteUserFn, finduserFn, refreshTokenFn, homeUserFn, insertUserFn, loginUserFn, middlewareAuth, updatePasswordFn, checkAccessTokenMiddleware } from './controller.js'
 import cookieParser from 'cookie-parser'
@@ -20,9 +20,9 @@ app.use(cors({
     'credentials': true
 }))
 
-dotenv.config({
-    path: dotenvPath
-})
+// dotenv.config({
+//     path: dotenvPath
+// })
 
 const PORT = process.env.PORT || 8000
 
