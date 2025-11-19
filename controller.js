@@ -39,12 +39,12 @@ export const refreshTokenFn = async (req, res) => {
                 return res.status(401).json({ message: `refresh token expired, login again. ${err}.` })
             }
             else {
-                console.log('connection check',checkConnection(con))
+                console.log('connection check', checkConnection(con))
                 result = await User.findOne({ refreshToken: refreshtoken_ }).exec()
-                console.log('result  in refresh: ---------- ', result.refreshToken);
+                console.log('result in refresh:- ', result.refreshToken);
 
                 if (result.refreshToken) {
-                    accessToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '1m' })
+                    accessToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '15m' })
                     return res.status(201).json({ message: 'accessToken refresh and send', accessToken: accessToken })
                 } else {
                     return res.status(404).json({ message: 'accessToken refresh not found in db, login in again.' })
@@ -138,17 +138,17 @@ export const loginUserFn = async (req, res) => {
 
 export const checkAccessTokenMiddleware = async (req, res, next) => {
     console.log('middleware hit')
-// accesstoken
+    // accesstoken
     const accessToken_ = req.headers.accesstoken
     if (!accessToken_) {
         return res.status(404).json({ message: 'token not found' })
     }
     jwt.verify(accessToken_, process.env.SECRET, (error, decoded) => {
         if (error?.name == 'TokenExpiredError') {
-            return res.status(401).json({ message: 'middleware ,Token is expired',error })
+            return res.status(401).json({ message: 'middleware ,Token is expired', error })
         }
         if (error) {
-            return res.status(401).json({ message: 'middleware error, Can not be verifyed token, login in again: ',error })
+            return res.status(401).json({ message: 'middleware error, Can not be verifyed token, login in again: ', error })
         }
         console.log(decoded);
         next();
@@ -272,6 +272,8 @@ export const insertUserFn = async (req, res) => {
 
 export const updatePasswordFn = async (req, res) => {
     const { usersname, password, newPassword } = req.body
+    console.log(usersname, password, newPassword);
+
     if (!usersname || !password || !newPassword) {
         return res
             .status(400)
@@ -287,17 +289,23 @@ export const updatePasswordFn = async (req, res) => {
 
     try {
         result = await User.findOne({ usersname })
-        if (!result) {
+        console.log('result password:- ', result);
+
+        if (result == false) {
             return res
                 .status(404)
                 .json({ message: 'User does not exsist' })
         }
-        if (result.password != password) {
+        const check = await bcrypt.compare(password, result.password)
+        console.log('check', check)
+
+        if (!check) {
             return res
-                .status(404)
+                .status(401)
                 .json({ message: 'Password is rong' })
         }
-        result = await User.updateOne({ usersname }, { $set: { password: newPassword } })
+        const hashed = await bcrypt.hash(newPassword, 10);
+        result = await User.updateOne({ usersname }, { $set: { password: hashed } })
         if (result.matchedCount == 1 && result.modifiedCount == 1) {
             return res
                 .status(201)

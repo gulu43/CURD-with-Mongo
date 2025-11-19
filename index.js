@@ -41,7 +41,7 @@ app.post('/refresh', refreshTokenFn)
 app.post('/home', checkAccessTokenMiddleware, homeUserFn)
 app.post('/login', loginUserFn)
 app.post('/register', insertUserFn)
-app.patch('/updatepassword', updatePasswordFn)
+app.patch('/updatepassword', checkAccessTokenMiddleware, updatePasswordFn)
 app.delete('/deleteaccount', deleteUserFn)
 app.get('/getuser', checkAccessTokenMiddleware, finduserFn)
 
@@ -61,10 +61,4 @@ app.use((err, req, res, next) => {
 
         })
     })()
-
-
-
-
-
-
 
