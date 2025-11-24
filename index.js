@@ -3,7 +3,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import { __dirname, publicPath } from './paths.utils.js'
 import conHelperFn, { con, User } from './db_connection.js'
-import { deleteUserFn, finduserFn, refreshTokenFn, homeUserFn, insertUserFn, loginUserFn, middlewareAuth, updatePasswordFn, checkAccessTokenMiddleware } from './controller.js'
+import { deleteUserFn, finduserFn, refreshTokenFn, homeUserFn, insertUserFn, loginUserFn, updatePasswordFn, checkAccessTokenMiddleware, initialRequest } from './controller.js'
 import cookieParser from 'cookie-parser'
 
 const app = express()
@@ -37,6 +37,8 @@ app.get('/', (req, res) => {
 
 })
 // app.post('/access', generateAccessTokenFn)
+// app.get('/refreshToken', checkAccessTokenMiddleware, initialAccessTokenRequest)
+app.get('/me', checkAccessTokenMiddleware, initialRequest)
 app.post('/refresh', refreshTokenFn)
 app.post('/home', checkAccessTokenMiddleware, homeUserFn)
 app.post('/login', loginUserFn)

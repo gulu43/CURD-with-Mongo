@@ -18,44 +18,70 @@ let accessToken;
 let refreshToken;
 let hashedPassword;
 
-// export const generateAccessTokenFn = async (req, res) => {}
+// export const generateMethordFn = async (req, res) => {}
+
+export const initialRequest = async (req, res) => {
+    console.log('***initialRequest hit');
+
+    res.status(200).json({ message: 'ok!' })
+}
+
+// export const initialAccessTokenRequest = async (req, res) => {
+//     const rt = req.query.rt
+//     console.log(req.query.rt);
+
+//     if (!rt) return res.status(404).json({ message: 'refreshToken not found' })
+//     jwt.verify(rt, process.env.SECRET, async (err, decode) => {
+//         if (err) return res.status(404).json({ message: 'refreshToken not found', error: err })
+//         if (decode) {
+//             return res.status(200).json({ message: 'ok!' })
+//         }
+//     })
+
+// }
 
 export const refreshTokenFn = async (req, res) => {
-    // console.log('refresh hit');
+    console.log('***refresh hit');
     // console.log('req---: ', req);
     // console.log('header: ', req.headers.refreshtoken);
 
     try {
+
         const refreshtoken_ = req.headers.refreshtoken;
-        // console.log('refreshToken: ', refreshtoken_);
+        console.log('refreshToken: ', refreshtoken_);
 
         if (!refreshtoken_) return res.status(404).json({ message: 'refresh token not found, login again.' })
 
         jwt.verify(refreshtoken_, process.env.SECRET, async (err, decode) => {
+            // Check TokenExpiredError FIRST
+            if (err?.name == 'TokenExpiredError') {
+                return res.status(401).json({
+                    message: `refresh token expired, login again.: ${err}`,
+                    error: err
+                })
+            }
             if (err) {
                 return res.status(400).json({ message: `Error while verifying the token: ${err}.` })
-            }
-            else if (err?.name == 'TokenExpiredError') {
-                return res.status(401).json({ message: `refresh token expired, login again. ${err}.` })
             }
             else {
                 console.log('connection check', checkConnection(con))
                 result = await User.findOne({ refreshToken: refreshtoken_ }).exec()
-                console.log('result in refresh:- ', result.refreshToken);
+                console.log('RefreshToken Found in db:- ', result?.refreshToken);
 
-                if (result.refreshToken) {
-                    accessToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '15m' })
+                if (result?.refreshToken) {
+                    accessToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '1m' })
+                    console.log('accessToken sending: ', accessToken);
+
                     return res.status(201).json({ message: 'accessToken refresh and send', accessToken: accessToken })
                 } else {
-                    return res.status(404).json({ message: 'accessToken refresh not found in db, login in again.' })
-
+                    return res.status(404).json({ message: 'accessToken refresh not found in db, login in again.' }, { 'redirect: ': '/login' })
                 }
             }
         })
 
     } catch (error) {
         console.log('error in refresh: ', error);
-
+        throw error
     }
 }
 
@@ -76,7 +102,7 @@ export const loginUserFn = async (req, res) => {
 
         if (!usersname || !password) {
             return res
-                .status(422)
+                .status(400)
                 .json({
                     message: `fields should not be empty.`
                 })
@@ -104,7 +130,7 @@ export const loginUserFn = async (req, res) => {
             // console.log('logedin! ')
             // console.log('result_id: -',result._id);
 
-            accessToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '10' })
+            accessToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '1m' })
             refreshToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '7d' })
 
             result = await User.updateOne({ _id: result._id }, { $set: { refreshToken: refreshToken } })
@@ -129,105 +155,140 @@ export const loginUserFn = async (req, res) => {
         }
     } catch (error) {
         console.error(error);
-        res.status(500).json({
+        return res.status(500).json({
             message: error?.message || 'Something went wrong',
         })
     }
 
 }
 
-export const checkAccessTokenMiddleware = async (req, res, next) => {
+// export const checkAccessTokenMiddleware = async (req, res, next) => {
+
+//     console.log('-------------------------------------------------------------------------------------');
+//     console.log('middleware hit')
+//     // accesstoken
+//     const accessToken_ = req.headers.accesstoken
+//     console.log(accessToken_)
+
+//     if (!accessToken_) {
+//         return res.status(401).json({ message: 'token not found' })
+//     }
+//     jwt.verify(accessToken_, process.env.SECRET, (error, decoded) => {
+//         if (error?.name == 'TokenExpiredError') {
+//             console.log('error :', error);
+//             return res.status(401).json({ message: 'middleware ,Token is expired', error })
+//         }
+//         if (error) {
+//             // console.log('403 one',accessToken_, error);
+
+//             return res.status(403).json({ message: 'middleware error, Can not be verifyed token, login in again: ', error })
+//         }
+//         console.log(decoded);
+
+//         next();
+//     })
+// console.log('-------------------------------------------------------------------------------------');
+//     // next()
+// }
+export function checkAccessTokenMiddleware(req, res, next) {
+    console.log('-------------------------------------------------------------------------------------');
     console.log('middleware hit')
-    // accesstoken
-    const accessToken_ = req.headers.accesstoken
+
+    const accessToken_ = req.headers.accesstoken;
+    console.log('in backend accessToken: ', accessToken_);
+
     if (!accessToken_) {
-        return res.status(404).json({ message: 'token not found' })
+        return res.status(401).json({ message: "token not found" });
     }
+
     jwt.verify(accessToken_, process.env.SECRET, (error, decoded) => {
-        if (error?.name == 'TokenExpiredError') {
-            return res.status(401).json({ message: 'middleware ,Token is expired', error })
+
+        if (error?.name === "TokenExpiredError") {
+            return res.status(401).json({ message: "Token expired" });
         }
+
         if (error) {
-            return res.status(401).json({ message: 'middleware error, Can not be verifyed token, login in again: ', error })
+            return res.status(403).json({ message: "Invalid token" });
         }
-        console.log(decoded);
+
+        // req.user = decoded;
         next();
-    })
-    // next()
+    });
+    console.log('-------------------------------------------------------------------------------------');
 }
 
-export const middlewareAuth = async (req, res, next) => {
-    accessToken = req.headers['accesstoken']
-    refreshToken = req.headers['refreshtoken']
+// export const middlewareAuth = async (req, res, next) => {
+//     accessToken = req.headers['accesstoken']
+//     refreshToken = req.headers['refreshtoken']
 
-    if (!accessToken) {
-        return res
-            .status(401)
-            .json({
-                message: 'Please Login first, accessToken is undefine.'
-            })
+//     if (!accessToken) {
+//         return res
+//             .status(401)
+//             .json({
+//                 message: 'Please Login first, accessToken is undefine.'
+//             })
 
-    }
-    jwt.verify(accessToken, process.env.SECRET, (err, decode) => {
-        if (err) {
-            return res
-                .status(401)
-                .json({
-                    message: 'Please Login first, accessToken is undefine: ', err
-                })
-        } else if (err == 'TokenExpiredError') {
-            console.log('accessToken is expired re-generating accesToken with refreshToken')
-            if (!refreshToken) {
-                return res
-                    .status(401)
-                    .json({
-                        message: 'Please Login first, refreshToken is undefine.'
-                    })
-            }
-            jwt.verify(refreshToken, process.env.SECRET, async (err, decode) => {
-                if (err) {
-                    console.error(err)
-                    return res
-                        .status(401)
-                        .json({
-                            message: 'Error while verifying refreshToken.', err
-                        })
-                }
-                else if (err == 'TokenExpiredError') {
-                    // console.log('refreshToken is expired login again')
-                    console.error(err)
-                    return res
-                        .status(401)
-                        .json({
-                            message: 'refreshToken is expired login again', err
-                        })
-                }
-                else {
-                    const _id = decode.users_id
-                    result = await User.findById(_id)
-                    if (!result) {
-                        console.log('testing:', result)
-                    }
-                    accessToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '1h' })
-                    return res
-                        .status(200)
-                        .json({
-                            message: 'accessToken re-generated from refreshToken',
-                            accessToken: accessToken
-                        })
-                        .redirect('/home')
+//     }
+//     jwt.verify(accessToken, process.env.SECRET, (err, decode) => {
+//         if (err) {
+//             return res
+//                 .status(401)
+//                 .json({
+//                     message: 'Please Login first, accessToken is undefine: ', err
+//                 })
+//         } else if (err == 'TokenExpiredError') {
+//             console.log('accessToken is expired re-generating accesToken with refreshToken')
+//             if (!refreshToken) {
+//                 return res
+//                     .status(401)
+//                     .json({
+//                         message: 'Please Login first, refreshToken is undefine.'
+//                     })
+//             }
+//             jwt.verify(refreshToken, process.env.SECRET, async (err, decode) => {
+//                 if (err) {
+//                     console.error(err)
+//                     return res
+//                         .status(401)
+//                         .json({
+//                             message: 'Error while verifying refreshToken.', err
+//                         })
+//                 }
+//                 else if (err == 'TokenExpiredError') {
+//                     // console.log('refreshToken is expired login again')
+//                     console.error(err)
+//                     return res
+//                         .status(401)
+//                         .json({
+//                             message: 'refreshToken is expired login again', err
+//                         })
+//                 }
+//                 else {
+//                     const _id = decode.users_id
+//                     result = await User.findById(_id)
+//                     if (!result) {
+//                         console.log('testing:', result)
+//                     }
+//                     accessToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '1h' })
+//                     return res
+//                         .status(200)
+//                         .json({
+//                             message: 'accessToken re-generated from refreshToken',
+//                             accessToken: accessToken
+//                         })
+//                         .redirect('/home')
 
-                }
-            })
+//                 }
+//             })
 
-        } else {
-            next()
+//         } else {
+//             next()
 
-        }
-    })
+//         }
+//     })
 
 
-}
+// }
 
 export const insertUserFn = async (req, res) => {
 
@@ -349,11 +410,11 @@ export const deleteUserFn = async (req, res) => {
 
         if (result.acknowledged == true && result.deletedCount == 1) {
             return res
-                .status(201)
+                .status(200)
                 .json({ message: 'User deleted sucess' })
         } else {
             return res
-                .status(400)
+                .status(500)
                 .json({ message: 'User deleted faild' })
         }
     } catch (error) {
