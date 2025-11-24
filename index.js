@@ -2,7 +2,7 @@ import express, { json, urlencoded } from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import { __dirname, publicPath } from './paths.utils.js'
-import conHelperFn, { con, User } from './db_connection.js'
+import conHelperFn, { con, User, RefreshToken } from './db_connection.js'
 import { deleteUserFn, finduserFn, refreshTokenFn, homeUserFn, insertUserFn, loginUserFn, updatePasswordFn, checkAccessTokenMiddleware, initialRequest } from './controller.js'
 import cookieParser from 'cookie-parser'
 

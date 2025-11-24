@@ -1,4 +1,4 @@
-import conHelperFn, { User, con, checkConnection } from "./db_connection.js"
+import conHelperFn, { User, RefreshToken, con, checkConnection } from "./db_connection.js"
 import mongoose from 'mongoose'
 import jwt from "jsonwebtoken";
 import "./paths.utils.js"
@@ -54,10 +54,9 @@ export const refreshTokenFn = async (req, res) => {
 
         jwt.verify(refreshtoken_, process.env.SECRET, async (err, decode) => {
             // Check TokenExpiredError FIRST
-            if (err?.name == 'TokenExpiredError') {
+            if (err.name == 'TokenExpiredError') {
                 return res.status(401).json({
-                    message: `refresh token expired, login again.: ${err}`,
-                    error: err
+                    message: `refresh token expired, login again.: ${err}`
                 })
             }
             if (err) {
@@ -65,16 +64,16 @@ export const refreshTokenFn = async (req, res) => {
             }
             else {
                 console.log('connection check', checkConnection(con))
-                result = await User.findOne({ refreshToken: refreshtoken_ }).exec()
-                console.log('RefreshToken Found in db:- ', result?.refreshToken);
+                result = await RefreshToken.findOne({ token: refreshtoken_ }).exec()
+                console.log('RefreshToken Found in col:- ', result.token);
 
-                if (result?.refreshToken) {
-                    accessToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '1m' })
+                if (result.token) {
+                    accessToken = jwt.sign({ users_id: result.usersId }, process.env.SECRET, { expiresIn: '1m' })
                     console.log('accessToken sending: ', accessToken);
 
                     return res.status(201).json({ message: 'accessToken refresh and send', accessToken: accessToken })
                 } else {
-                    return res.status(404).json({ message: 'accessToken refresh not found in db, login in again.' }, { 'redirect: ': '/login' })
+                    return res.status(404).json({ message: 'accessToken refresh not found in collection, maybe it is expired, login in again.' })
                 }
             }
         })
@@ -133,17 +132,16 @@ export const loginUserFn = async (req, res) => {
             accessToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '1m' })
             refreshToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '7d' })
 
-            result = await User.updateOne({ _id: result._id }, { $set: { refreshToken: refreshToken } })
+            // console.log('values: ', refreshToken, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+            const refResult = await RefreshToken.create({ usersId: result._id, token: refreshToken, expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) })
             // console.log('update the refresh token in db: ', result.refreshToken);
 
             return res
                 .status(200)
                 .json({
                     message: `You logedin!`,
-                    matchedCount: result.matchedCount,
-                    modifiedCount: result.modifiedCount,
-                    accessToken: accessToken,
-                    refreshToken: refreshToken
+                    refreshToken: refResult.token,
+                    accessToken: accessToken
                 })
 
         } else {
@@ -315,7 +313,7 @@ export const insertUserFn = async (req, res) => {
                 message: `message: ${result}`
             })
     } catch (error) {
-        console.error(error);
+        console.error(error)
         if (error.code === 11000) {
             // Duplicate key (unique field conflict)
             res.status(400).json({

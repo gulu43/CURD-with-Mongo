@@ -1,5 +1,6 @@
 import mongoose, { createConnection, connect } from 'mongoose'
 import usersSchema from './users.model.js'
+import refreshTokenSchema from './refreshToken.model.js'
 import './paths.utils.js'
 import dotenv from 'dotenv'
 
@@ -8,6 +9,7 @@ import dotenv from 'dotenv'
 // })
 
 export const User = new mongoose.model('User', usersSchema, 'users')
+export const RefreshToken = new mongoose.model('RefreshToken', refreshTokenSchema)
 
 const uri = `${process.env.CONSTR}`
 // console.log('connection string: ', uri)
