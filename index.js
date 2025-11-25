@@ -45,10 +45,8 @@ app.post('/login', loginUserFn)
 app.post('/register', insertUserFn)
 app.patch('/updatepassword', checkAccessTokenMiddleware, updatePasswordFn)
 app.post('/logout', checkAccessTokenMiddleware, logoutFn)
-app.delete('/deleteaccount', deleteUserFn)
+app.delete('/deleteaccount', checkAccessTokenMiddleware, deleteUserFn)
 app.get('/getuser', checkAccessTokenMiddleware, finduserFn)
-
-
 
 app.use((err, req, res, next) => {
     console.error('Caught error:', err)

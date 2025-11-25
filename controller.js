@@ -220,7 +220,7 @@ export function checkAccessTokenMiddleware(req, res, next) {
             return res.status(403).json({ message: "Invalid token" });
         }
 
-        // req.user = decoded;
+        req.user = decoded;
         next();
     });
     console.log('-------------------------------------------------------------------------------------');
@@ -395,43 +395,20 @@ export const updatePasswordFn = async (req, res) => {
 }
 
 export const deleteUserFn = async (req, res) => {
-    const { usersname } = req.body
-    if (!usersname) {
-        return res
-            .status(400)
-            .json({
-                message: `feield/s should not be empty`
-            })
-    }
-
     try {
-        result = await User.findOne({ usersname })
-        const _id = result._id
-        console.log("users id: ", _id);
+        // console.log('decoded: id: ', req.user.users_id);
 
-        if (!result) {
-            return res
-                .status(404)
-                .json({ message: 'User does not exsist' })
-        }
-        result = await User.deleteOne({ _id })
-        // console.log("see: ", result);
+        const userId = req.user.users_id
 
-        if (result.acknowledged == true && result.deletedCount == 1) {
-            return res
-                .status(200)
-                .json({ message: 'User deleted sucess' })
-        } else {
-            return res
-                .status(500)
-                .json({ message: 'User deleted faild' })
-        }
+        const result = await User.deleteOne({ _id: userId })
+
+        if (result.deletedCount === 0)
+            return res.status(404).json({ message: 'User does not exist' })
+
+        return res.status(200).json({ message: 'User deleted successfully' })
+
     } catch (error) {
-        res
-            .status(500)
-            .json({
-                message: error?.message || 'Something went wrong white deleting',
-            })
+        res.status(500).json({ message: error.message || 'Something went wrong' })
     }
 }
 
