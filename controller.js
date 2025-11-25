@@ -48,13 +48,13 @@ export const refreshTokenFn = async (req, res) => {
     try {
 
         const refreshtoken_ = req.headers.refreshtoken;
-        console.log('refreshToken: ', refreshtoken_);
+        console.log('refreshToken: ', refreshtoken_)
 
         if (!refreshtoken_) return res.status(404).json({ message: 'refresh token not found, login again.' })
 
         jwt.verify(refreshtoken_, process.env.SECRET, async (err, decode) => {
             // Check TokenExpiredError FIRST
-            if (err.name == 'TokenExpiredError') {
+            if (err?.name == 'TokenExpiredError') {
                 return res.status(401).json({
                     message: `refresh token expired, login again.: ${err}`
                 })
@@ -67,13 +67,24 @@ export const refreshTokenFn = async (req, res) => {
                 result = await RefreshToken.findOne({ token: refreshtoken_ }).exec()
                 console.log('RefreshToken Found in col:- ', result.token);
 
+                // checking time
+                const expireTimeOfToken = new Date(result.expiryDate).getTime()
+                const currentTime = Date.now()
+                const expireCheck = expireTimeOfToken > currentTime;
+                // console.log(expireTimeOfToken , currentTime);
+
+                // console.log('value:', expireCheck);
+
+                if (expireCheck === false || result.isRevoked === true) {
+                    return res.status(401).json({ message: 'RefreshToken expired, or revoked' })
+                }
                 if (result.token) {
                     accessToken = jwt.sign({ users_id: result.usersId }, process.env.SECRET, { expiresIn: '1m' })
                     console.log('accessToken sending: ', accessToken);
 
                     return res.status(201).json({ message: 'accessToken refresh and send', accessToken: accessToken })
                 } else {
-                    return res.status(404).json({ message: 'accessToken refresh not found in collection, maybe it is expired, login in again.' })
+                    return res.status(404).json({ message: 'token not found or it is expired, login again.' })
                 }
             }
         })
@@ -424,6 +435,23 @@ export const deleteUserFn = async (req, res) => {
     }
 }
 
+export const logoutFn = async (req, res) => {
+    const { token } = req.body
+    if (!token) {
+        return res
+            .status(404)
+            .json({ message: 'token does not exsist' })
+    }
+    const logoutResult = await RefreshToken.findOneAndUpdate({ token: token }, { isRevoked: true }, { new: true })
+    // console.log('logout revoked: ', logoutResult);
+    // console.log('logoutResult.isRevoked', logoutResult.isRevoked);
+
+    if (logoutResult.isRevoked === true) {
+        return res.status(201).json({ message: 'token revoked!', isRevoked: logoutResult.isRevoked })
+    } else {
+        return res.status(500).json({ message: 'Internal Error while revoking token, plz clear cookies/local manually to resolve this error' })
+    }
+}
 export const finduserFn = async (req, res) => {
 
     const { usersname } = req.query
