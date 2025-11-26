@@ -5,7 +5,7 @@ import "./paths.utils.js"
 import dotenv from 'dotenv'
 import { error } from "console";
 import bcrypt from "bcryptjs";
-import { decode } from "punycode";
+// import { decode } from "punycode";
 import e from "cors";
 // how to db and collection code plz
 
@@ -79,9 +79,16 @@ export const refreshTokenFn = async (req, res) => {
                     return res.status(401).json({ message: 'RefreshToken expired, or revoked' })
                 }
                 if (result.token) {
-                    accessToken = jwt.sign({ users_id: result.usersId }, process.env.SECRET, { expiresIn: '1m' })
+    
+                    accessToken = jwt.sign({ users_id: result.usersId, role: decode.role }, process.env.SECRET, { expiresIn: '1m' })
                     console.log('accessToken sending: ', accessToken);
-
+                    
+                    // console.log('diff: ',decode, result.token);
+                    
+                    // console.log('decode in refesh: --------',decode);
+                    req.user = decode
+                    // console.log('user in refresh----- : ',req.user);
+                    
                     return res.status(201).json({ message: 'accessToken refresh and send', accessToken: accessToken })
                 } else {
                     return res.status(404).json({ message: 'token not found or it is expired, login again.' })
@@ -140,8 +147,8 @@ export const loginUserFn = async (req, res) => {
             // console.log('logedin! ')
             // console.log('result_id: -',result._id);
 
-            accessToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '1m' })
-            refreshToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '7d' })
+            accessToken = jwt.sign({ users_id: result._id, role: result.role }, process.env.SECRET, { expiresIn: '1m' })
+            refreshToken = jwt.sign({ users_id: result._id, role: result.role }, process.env.SECRET, { expiresIn: '7d' })
 
             // console.log('values: ', refreshToken, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
             const refResult = await RefreshToken.create({ usersId: result._id, token: refreshToken, expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) })
@@ -210,7 +217,7 @@ export function checkAccessTokenMiddleware(req, res, next) {
         return res.status(401).json({ message: "token not found" });
     }
 
-    jwt.verify(accessToken_, process.env.SECRET, (error, decoded) => {
+    jwt.verify(accessToken_, process.env.SECRET, (error, decode) => {
 
         if (error?.name === "TokenExpiredError") {
             return res.status(401).json({ message: "Token expired" });
@@ -220,84 +227,27 @@ export function checkAccessTokenMiddleware(req, res, next) {
             return res.status(403).json({ message: "Invalid token" });
         }
 
-        req.user = decoded;
+        console.log('AuthMiddleWare AccessToken Value: ', decode)
+        req.user = decode;
+        console.log('AuthMiddleWare user values:',req.user);
+        
         next();
     });
     console.log('-------------------------------------------------------------------------------------');
 }
 
-// export const middlewareAuth = async (req, res, next) => {
-//     accessToken = req.headers['accesstoken']
-//     refreshToken = req.headers['refreshtoken']
+export function allowedRoles(...roles) {
+    return (req, res, next) => {
+        console.log('Middleware Allowed Roles: ', roles)
+        console.log('users permission: ', req.user)
 
-//     if (!accessToken) {
-//         return res
-//             .status(401)
-//             .json({
-//                 message: 'Please Login first, accessToken is undefine.'
-//             })
+        if (!roles.includes(req.user.role)) {
+            return res.status(403).json({ message: 'Access denied' })
+        }
+        next()
+    }
 
-//     }
-//     jwt.verify(accessToken, process.env.SECRET, (err, decode) => {
-//         if (err) {
-//             return res
-//                 .status(401)
-//                 .json({
-//                     message: 'Please Login first, accessToken is undefine: ', err
-//                 })
-//         } else if (err == 'TokenExpiredError') {
-//             console.log('accessToken is expired re-generating accesToken with refreshToken')
-//             if (!refreshToken) {
-//                 return res
-//                     .status(401)
-//                     .json({
-//                         message: 'Please Login first, refreshToken is undefine.'
-//                     })
-//             }
-//             jwt.verify(refreshToken, process.env.SECRET, async (err, decode) => {
-//                 if (err) {
-//                     console.error(err)
-//                     return res
-//                         .status(401)
-//                         .json({
-//                             message: 'Error while verifying refreshToken.', err
-//                         })
-//                 }
-//                 else if (err == 'TokenExpiredError') {
-//                     // console.log('refreshToken is expired login again')
-//                     console.error(err)
-//                     return res
-//                         .status(401)
-//                         .json({
-//                             message: 'refreshToken is expired login again', err
-//                         })
-//                 }
-//                 else {
-//                     const _id = decode.users_id
-//                     result = await User.findById(_id)
-//                     if (!result) {
-//                         console.log('testing:', result)
-//                     }
-//                     accessToken = jwt.sign({ users_id: result._id }, process.env.SECRET, { expiresIn: '1h' })
-//                     return res
-//                         .status(200)
-//                         .json({
-//                             message: 'accessToken re-generated from refreshToken',
-//                             accessToken: accessToken
-//                         })
-//                         .redirect('/home')
-
-//                 }
-//             })
-
-//         } else {
-//             next()
-
-//         }
-//     })
-
-
-// }
+}
 
 export const insertUserFn = async (req, res) => {
 
@@ -449,7 +399,8 @@ export const finduserFn = async (req, res) => {
                 .status(200)
                 .json({ data: result })
         } else {
-            result = await User.find().select({ _id: 0, password: 0, createdAt: 0, updatedAt: 0, __v: 0, status: 0 })
+            result = await User.find().select({ __v: 0 })
+            // result = await User.find().select({ _id: 0, password: 0, createdAt: 0, updatedAt: 0, __v: 0, status: 0 })
             console.log('All users: ', result)
 
             return res
