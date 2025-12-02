@@ -348,8 +348,9 @@ export const deleteUserFn = async (req, res) => {
     try {
         // console.log('decoded: id: ', req.user.users_id);
 
-        const userId = req.user.users_id
-
+        const { userId } = req.body
+        console.log('in server : ',userId);
+        
         const result = await User.deleteOne({ _id: userId })
 
         if (result.deletedCount === 0)
@@ -399,7 +400,7 @@ export const finduserFn = async (req, res) => {
                 .status(200)
                 .json({ data: result })
         } else {
-            result = await User.find().select({ __v: 0 })
+            result = await User.find()
             // result = await User.find().select({ _id: 0, password: 0, createdAt: 0, updatedAt: 0, __v: 0, status: 0 })
             console.log('All users: ', result)
 
