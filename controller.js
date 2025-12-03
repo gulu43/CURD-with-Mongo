@@ -79,16 +79,16 @@ export const refreshTokenFn = async (req, res) => {
                     return res.status(401).json({ message: 'RefreshToken expired, or revoked' })
                 }
                 if (result.token) {
-    
+
                     accessToken = jwt.sign({ users_id: result.usersId, role: decode.role }, process.env.SECRET, { expiresIn: '1m' })
                     console.log('accessToken sending: ', accessToken);
-                    
+
                     // console.log('diff: ',decode, result.token);
-                    
+
                     // console.log('decode in refesh: --------',decode);
                     req.user = decode
                     // console.log('user in refresh----- : ',req.user);
-                    
+
                     return res.status(201).json({ message: 'accessToken refresh and send', accessToken: accessToken })
                 } else {
                     return res.status(404).json({ message: 'token not found or it is expired, login again.' })
@@ -229,8 +229,8 @@ export function checkAccessTokenMiddleware(req, res, next) {
 
         console.log('AuthMiddleWare AccessToken Value: ', decode)
         req.user = decode;
-        console.log('AuthMiddleWare user values:',req.user);
-        
+        console.log('AuthMiddleWare user values:', req.user);
+
         next();
     });
     console.log('-------------------------------------------------------------------------------------');
@@ -344,13 +344,58 @@ export const updatePasswordFn = async (req, res) => {
     }
 }
 
+export const updateUserFn = async (req, res) => {
+    const { _id, name, age, usersname, password, status, role } = req.body;
+
+    if (!_id) {
+        return res.status(400).json({
+            message: "Id is required for updating user"
+        });
+    }
+
+    try {
+        // Check if user exists
+        const user = await User.findById(_id);
+        if (!user) {
+            return res.status(404).json({ message: "User does not exist" });
+        }
+
+        const updateData = {};
+
+        if (name) updateData.name = name;
+        if (age) updateData.age = age;
+        if (usersname) updateData.usersname = usersname;
+        if (status) updateData.status = status;
+        if (role) updateData.role = role;
+        if (password) updateData.password = await bcrypt.hash(password, 10);
+
+        console.log('updated data: ',updateData);
+        
+
+        const result = await User.updateOne({ _id }, { $set: updateData });
+        console.log('not happing: ',result);
+        
+        if (result.matchedCount === 1 && result.modifiedCount === 1) {
+            return res.status(200).json({ message: "User updated successfully" });
+        } else {
+            return res.status(400).json({ message: "Nothing updated" });
+        }
+
+    } catch (error) {
+        return res.status(500).json({
+            message: error.message || "Something went wrong"
+        });
+    }
+};
+
+
 export const deleteUserFn = async (req, res) => {
     try {
         // console.log('decoded: id: ', req.user.users_id);
 
         const { userId } = req.body
-        console.log('in server : ',userId);
-        
+        console.log('in server : ', userId);
+
         const result = await User.deleteOne({ _id: userId })
 
         if (result.deletedCount === 0)
