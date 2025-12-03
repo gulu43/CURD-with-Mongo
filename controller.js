@@ -251,8 +251,13 @@ export function allowedRoles(...roles) {
 
 export const insertUserFn = async (req, res) => {
 
+    let userData = {};
+
     // console.log('controller: ',checkConnection(con))
-    const { name, age, usersname, password } = req.body
+    const { name, age, usersname, password, status, role } = req.body
+
+    if (status !== undefined) userData.status = status;
+    if (role !== undefined) userData.role = role;
 
     try {
         if (!name || !age || !usersname || !password) {
@@ -266,7 +271,7 @@ export const insertUserFn = async (req, res) => {
         hashedPassword = await bcrypt.hash(password, 10)
 
         console.log("all: ", name, age, usersname, password);
-        result = await User.create({ name, age, usersname, password: hashedPassword })
+        result = await User.create({ name, age, usersname, password: hashedPassword, status: userData.status, role: userData.role })
 
         return res
             .status(201)
@@ -369,12 +374,12 @@ export const updateUserFn = async (req, res) => {
         if (role) updateData.role = role;
         if (password) updateData.password = await bcrypt.hash(password, 10);
 
-        console.log('updated data: ',updateData);
-        
+        console.log('updated data: ', updateData);
+
 
         const result = await User.updateOne({ _id }, { $set: updateData });
-        console.log('not happing: ',result);
-        
+        console.log('not happing: ', result);
+
         if (result.matchedCount === 1 && result.modifiedCount === 1) {
             return res.status(200).json({ message: "User updated successfully" });
         } else {
