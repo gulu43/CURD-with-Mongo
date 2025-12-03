@@ -430,12 +430,13 @@ export const logoutFn = async (req, res) => {
         return res.status(500).json({ message: 'Internal Error while revoking token, plz clear cookies/local manually to resolve this error' })
     }
 }
+
 export const finduserFn = async (req, res) => {
 
-    const { usersname } = req.query
+    const { usersname, skip, limit } = req.query
     console.log('what i am getting from users: ', usersname);
 
-    console.log("finduser api hit")
+    // console.log("finduser api hit")
 
     try {
         if (usersname) {
@@ -450,7 +451,7 @@ export const finduserFn = async (req, res) => {
                 .status(200)
                 .json({ data: result })
         } else {
-            result = await User.find()
+            result = await User.find().skip(Number(skip)).limit(Number(limit))
             // result = await User.find().select({ _id: 0, password: 0, createdAt: 0, updatedAt: 0, __v: 0, status: 0 })
             console.log('All users: ', result)
 
@@ -463,6 +464,4 @@ export const finduserFn = async (req, res) => {
             .status(500)
             .json({ message: error || 'Something went roung in findusersFn' })
     }
-
-
 }
