@@ -1,6 +1,12 @@
 import mongoose from 'mongoose'
+import Counter from './counter.model.js'
 
 const usersSchema = new mongoose.Schema({
+
+    userId: {
+        type: Number,
+        unique: true
+    },
     name: {
         type: String,
         required: true,
@@ -35,7 +41,7 @@ const usersSchema = new mongoose.Schema({
     role: {
         type: String,
         required: true,
-        enum: ['user', 'admin' ],
+        enum: ['user', 'admin'],
         default: 'user'
 
     }
@@ -43,3 +49,19 @@ const usersSchema = new mongoose.Schema({
 }, { timestamps: true })
 
 export default usersSchema
+
+// AUTO-INCREMENT MIDDLEWARE
+usersSchema.pre("save", async function (next) {
+    // only increment when a NEW document is being created
+    if (this.isNew) {
+        const counter = await Counter.findByIdAndUpdate(
+            { _id: "userId" },             // counter name
+            { $inc: { seq: 1 } },          // increase sequence by 1
+            { new: true, upsert: true }    // create if not exists
+        );
+
+        this.userId = counter.seq;         // assign the new number
+    }
+
+    next();
+});
