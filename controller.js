@@ -80,7 +80,7 @@ export const refreshTokenFn = async (req, res) => {
                 }
                 if (result.token) {
 
-                    accessToken = jwt.sign({ users_id: result.usersId, role: decode.role }, process.env.SECRET, { expiresIn: '1m' })
+                    accessToken = jwt.sign({ users_id: result.usersId, role: decode.role, usersname: decode.usersname }, process.env.SECRET, { expiresIn: '1m' })
                     console.log('accessToken sending: ', accessToken);
 
                     // console.log('diff: ',decode, result.token);
@@ -147,8 +147,8 @@ export const loginUserFn = async (req, res) => {
             // console.log('logedin! ')
             // console.log('result_id: -',result._id);
 
-            accessToken = jwt.sign({ users_id: result._id, role: result.role }, process.env.SECRET, { expiresIn: '1m' })
-            refreshToken = jwt.sign({ users_id: result._id, role: result.role }, process.env.SECRET, { expiresIn: '7d' })
+            accessToken = jwt.sign({ users_id: result._id, role: result.role, usersname: result.usersname }, process.env.SECRET, { expiresIn: '1m' })
+            refreshToken = jwt.sign({ users_id: result._id, role: result.role, usersname: result.usersname }, process.env.SECRET, { expiresIn: '7d' })
 
             // console.log('values: ', refreshToken, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
             const refResult = await RefreshToken.create({ usersId: result._id, token: refreshToken, expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) })
@@ -296,7 +296,10 @@ export const insertUserFn = async (req, res) => {
 }
 
 export const updatePasswordFn = async (req, res) => {
-    const { usersname, password, newPassword } = req.body
+    const { usersname } = req.user
+    console.log('ok: ',req.user);
+    
+    const { password, newPassword } = req.body
     console.log(usersname, password, newPassword);
 
     if (!usersname || !password || !newPassword) {
