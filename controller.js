@@ -113,6 +113,9 @@ export const homeUserFn = async (req, res) => {
 
 }
 export const loginUserFn = async (req, res) => {
+
+    let profileInfo = {};
+
     try {
         const { usersname, password } = req.body
         // console.log("from user: --------", usersname, password);
@@ -133,6 +136,11 @@ export const loginUserFn = async (req, res) => {
                     message: `User does not exists, Please register first`
                 })
         }
+
+        profileInfo.usersname = result.usersname
+        profileInfo.name = result.name
+        profileInfo.role = result.role
+
         const checkPassword = await bcrypt.compare(password, result.password)
         // console.log('did it mached: ------', checkPassword);
 
@@ -159,7 +167,8 @@ export const loginUserFn = async (req, res) => {
                 .json({
                     message: `You logedin!`,
                     refreshToken: refResult.token,
-                    accessToken: accessToken
+                    accessToken: accessToken,
+                    rawDetails: profileInfo
                 })
 
         } else {
@@ -297,8 +306,8 @@ export const insertUserFn = async (req, res) => {
 
 export const updatePasswordFn = async (req, res) => {
     const { usersname } = req.user
-    console.log('ok: ',req.user);
-    
+    console.log('ok: ', req.user);
+
     const { password, newPassword } = req.body
     console.log(usersname, password, newPassword);
 
@@ -434,6 +443,43 @@ export const logoutFn = async (req, res) => {
     }
 }
 
+export const finduserPostFn = async (req, res) => {
+
+    // const { _id, skip, limit } = req.body
+    const { _id } = req.body
+    console.log('what i am getting from users: ', _id);
+
+    // console.log("finduser api hit")
+
+    try {
+        if (_id) {
+            // result = await User.findOne({ usersname }).select({ _id: 0, password: 0, createdAt: 0, updatedAt: 0, __v: 0, status: 0 })
+            result = await User.findById({ _id })
+            console.log('single users: ', result)
+            if (!result) {
+                return res
+                    .status(404)
+                    .json({ message: 'user does not exist' })
+            }
+            return res
+                .status(200)
+                .json({ data: result })
+        } else {
+            result = await User.find().skip(Number(skip)).limit(Number(limit))
+            // result = await User.find().select({ _id: 0, password: 0, createdAt: 0, updatedAt: 0, __v: 0, status: 0 })
+            console.log('All users: ', result)
+
+            return res
+                .status(200)
+                .json({ data: result })
+        }
+    } catch (error) {
+        return res
+            .status(500)
+            .json({ message: error || 'Something went roung in findusersFn' })
+    }
+}
+
 export const finduserFn = async (req, res) => {
 
     const { usersname, skip, limit } = req.query
@@ -443,7 +489,8 @@ export const finduserFn = async (req, res) => {
 
     try {
         if (usersname) {
-            result = await User.findOne({ usersname }).select({ _id: 0, password: 0, createdAt: 0, updatedAt: 0, __v: 0, status: 0 })
+            // result = await User.findOne({ usersname }).select({ _id: 0, password: 0, createdAt: 0, updatedAt: 0, __v: 0, status: 0 })
+            result = await User.findOne({ usersname })
             console.log('single users: ', result)
             if (!result) {
                 return res
