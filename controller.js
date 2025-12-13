@@ -1,4 +1,4 @@
-import conHelperFn, { User, RefreshToken, con, checkConnection } from "./db_connection.js"
+import conHelperFn, { User, RefreshToken, con, checkConnection, Task, Member, Comment, Attachment } from "./db_connection.js"
 import mongoose from 'mongoose'
 import jwt from "jsonwebtoken";
 import "./paths.utils.js"
@@ -80,7 +80,7 @@ export const refreshTokenFn = async (req, res) => {
                 }
                 if (result.token) {
 
-                    accessToken = jwt.sign({ users_id: result.usersId, role: decode.role, usersname: decode.usersname }, process.env.SECRET, { expiresIn: '1m' })
+                    accessToken = jwt.sign({ users_id: result.usersId, role: decode.role, usersname: decode.usersname }, process.env.SECRET, { expiresIn: '15m' })
                     console.log('accessToken sending: ', accessToken);
 
                     // console.log('diff: ',decode, result.token);
@@ -155,7 +155,7 @@ export const loginUserFn = async (req, res) => {
             // console.log('logedin! ')
             // console.log('result_id: -',result._id);
 
-            accessToken = jwt.sign({ users_id: result._id, role: result.role, usersname: result.usersname }, process.env.SECRET, { expiresIn: '1m' })
+            accessToken = jwt.sign({ users_id: result._id, role: result.role, usersname: result.usersname }, process.env.SECRET, { expiresIn: '15m' })
             refreshToken = jwt.sign({ users_id: result._id, role: result.role, usersname: result.usersname }, process.env.SECRET, { expiresIn: '7d' })
 
             // console.log('values: ', refreshToken, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
@@ -515,3 +515,40 @@ export const finduserFn = async (req, res) => {
             .json({ message: error || 'Something went roung in findusersFn' })
     }
 }
+
+export const createTaskFn = async (req, res) => {
+    // const { title, dessciption, status, isAssigned, priority, dueDate, createdBy, updatedBy, isDeleted } = req.body
+
+    let { title, description, priority, dueDate, createdBy, status, isAssigned, updatedBy, isDeleted } = req.body
+    
+    console.log(req.user.users_id);
+    createdBy = req.user.users_id
+
+    console.log('this are the values: ',title, description, priority, dueDate, createdBy);
+    if (!title || !description || !priority || !dueDate || !createdBy) {
+        return res.status(404).json({ message: 'feilds should not be empty' })
+    }
+
+    const result = await Task.create({
+        title,
+        description,
+        priority,
+        dueDate,
+        createdBy,
+        status,
+        isAssigned,
+        updatedBy,
+        isDeleted
+    })
+    console.log('task result: ', result);
+
+    if (result) {
+        return res.status(201).json({ message: 'Task Createds' })
+
+    } else {
+        return res.status(500).json({ message: 'error while creating data' })
+    }
+
+
+
+} 

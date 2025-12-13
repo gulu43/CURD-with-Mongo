@@ -3,7 +3,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import { __dirname, publicPath } from './paths.utils.js'
 import conHelperFn, { con, User, RefreshToken } from './db_connection.js'
-import { deleteUserFn, finduserFn, refreshTokenFn, homeUserFn, insertUserFn, loginUserFn, updatePasswordFn, checkAccessTokenMiddleware, initialRequest, logoutFn, allowedRoles, updateUserFn, finduserPostFn } from './controller.js'
+import { deleteUserFn, finduserFn, refreshTokenFn, homeUserFn, insertUserFn, loginUserFn, updatePasswordFn, checkAccessTokenMiddleware, initialRequest, logoutFn, allowedRoles, updateUserFn, finduserPostFn, createTaskFn } from './controller.js'
 import cookieParser from 'cookie-parser'
 
 const app = express()
@@ -49,6 +49,7 @@ app.post('/logout', checkAccessTokenMiddleware, logoutFn)
 app.delete('/deleteaccount', checkAccessTokenMiddleware, allowedRoles('admin'), deleteUserFn)
 app.get('/getuser', checkAccessTokenMiddleware, allowedRoles('admin'), finduserFn)
 app.post('/getuserpost', checkAccessTokenMiddleware, allowedRoles('admin'), finduserPostFn)
+app.post('/createtask',checkAccessTokenMiddleware, allowedRoles('admin'), createTaskFn)
 
 app.use((err, req, res, next) => {
     console.error('Caught error:', err)

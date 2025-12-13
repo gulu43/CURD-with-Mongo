@@ -2,13 +2,6 @@ import mongoose, { Schema } from "mongoose"
 
 export const tasksSchema = new mongoose.Schema({
 
-    // not needed for now
-    // projectId: {
-    //     type: Schema.Types.ObjectId,
-    //     ref: "Project",
-    //     required: true
-    // },
-
     title: {
         type: String,
         required: true,
@@ -43,14 +36,22 @@ export const tasksSchema = new mongoose.Schema({
     priority: {
         type: String,
         enum: ['low', 'medium', 'high', 'urgent'],
-        default: 'medium'
+        default: 'medium',
+        required: true
     },
     dueDate: {
         type: Date,
         required: false,
         validate: {
             validator: function (value) {
-                return value > new Date()
+
+                const selected = new Date(value);
+                selected.setHours(0, 0, 0, 0);
+
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                return selected >= today;
             },
             message: 'Selected date/time must be greater than the current date/time'
         },
@@ -61,13 +62,14 @@ export const tasksSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
-    UpdatedBy: {
+    updatedBy: {
         type: Schema.Types.ObjectId,
         ref: 'User',
         required: false
     },
     isDeleted: {
         type: Boolean,
+        required: false,
         default: false
     },
 
