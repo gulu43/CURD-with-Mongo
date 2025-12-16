@@ -3,7 +3,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import { __dirname, publicPath } from './paths.utils.js'
 import conHelperFn, { con, User, RefreshToken } from './db_connection.js'
-import { deleteUserFn, finduserFn, refreshTokenFn, homeUserFn, insertUserFn, loginUserFn, updatePasswordFn, checkAccessTokenMiddleware, initialRequest, logoutFn, allowedRoles, updateUserFn, finduserPostFn, createTaskFn, getTasksFn, deleteTaskFn, findTaskPostFn } from './controller.js'
+import { deleteUserFn, finduserFn, refreshTokenFn, homeUserFn, insertUserFn, loginUserFn, updatePasswordFn, checkAccessTokenMiddleware, initialRequest, logoutFn, allowedRoles, updateUserFn, finduserPostFn, createTaskFn, getTasksFn, deleteTaskFn, findTaskPostFn, findUserForTaskFn, assignTaskFn } from './controller.js'
 import cookieParser from 'cookie-parser'
 
 const app = express()
@@ -53,6 +53,8 @@ app.post('/createtask',checkAccessTokenMiddleware, allowedRoles('admin'), create
 app.get('/gettasks',checkAccessTokenMiddleware, allowedRoles('admin'), getTasksFn)
 app.delete('/deletetask', checkAccessTokenMiddleware, allowedRoles('admin'), deleteTaskFn)
 app.post('/gettaskspost', checkAccessTokenMiddleware, allowedRoles('admin'), findTaskPostFn)
+app.post('/allroleusers', checkAccessTokenMiddleware, allowedRoles('admin'), findUserForTaskFn)
+app.post('/assigntask', checkAccessTokenMiddleware, allowedRoles('admin'), assignTaskFn)
 
 app.use((err, req, res, next) => {
     console.error('Caught error:', err)

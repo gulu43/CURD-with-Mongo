@@ -603,4 +603,74 @@ export const findTaskPostFn = async (req, res) => {
 
 }
 
+export const findUserForTaskFn = async (req, res) => {
+    const { name } = req.body
+    if (!name) {
+        return res.status(400).json({ message: 'feild reqired' })
+    }
+    try {
+        const result = await User.find({
+            name: { $regex: `^${name}`, $options: 'i' },
+            role: 'user'
+        }).limit(20);
+        // const result = await User.find({})
+        if (!result) {
+            return res
+                .status(404)
+                .json({ message: 'user does not exist' })
+        }
+        // console.log(': ', result);
+
+        return res
+            .status(200)
+            .json({ usersList: result })
+
+    } catch (error) {
+        return res
+            .status(500)
+            .json({ message: error || 'Something went roung in findUserForTaskFn' })
+    }
+}
+
+export const assignTaskFn = async (req, res) => {
+    try {
+
+        const { taskId, userId, role } = req.body;
+        const addedBy = req.user.users_id;
+
+        if (!taskId || !userId || !addedBy) {
+            return res.status(400).json({ message: 'Fields required' });
+        }
+
+        const exists = await Member.findOne({ taskId, userId });
+        if (exists) {
+            return res.status(409).json({ message: 'User already assigned' });
+        }
+
+        await Member.create({
+            taskId,
+            userId,
+            role,
+            addedBy
+        });
+
+        await Task.updateOne(
+            { _id: taskId },
+            {
+                updatedBy: addedBy,
+                isAssigned: true
+            }
+        );
+
+        return res.status(200).json({
+            message: 'Task assigned successfully'
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            message: 'Error while assigning task',error
+        });
+    }
+};
 
