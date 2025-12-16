@@ -3,7 +3,7 @@ import mongoose, { Schema } from "mongoose";
 export const taskAttachmentSchema = new Schema(
     {
         taskId: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             ref: "Task",
             required: true
         },
@@ -24,7 +24,7 @@ export const taskAttachmentSchema = new Schema(
         },
 
         uploadedBy: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             required: true
         }

@@ -520,11 +520,11 @@ export const createTaskFn = async (req, res) => {
     // const { title, dessciption, status, isAssigned, priority, dueDate, createdBy, updatedBy, isDeleted } = req.body
 
     let { title, description, priority, dueDate, createdBy, status, isAssigned, updatedBy, isDeleted } = req.body
-    
+
     console.log(req.user.users_id);
     createdBy = req.user.users_id
 
-    console.log('this are the values: ',title, description, priority, dueDate, createdBy);
+    console.log('this are the values: ', title, description, priority, dueDate, createdBy);
     if (!title || !description || !priority || !dueDate || !createdBy) {
         return res.status(404).json({ message: 'feilds should not be empty' })
     }
@@ -551,4 +551,56 @@ export const createTaskFn = async (req, res) => {
 
 
 
-} 
+}
+
+export const getTasksFn = async (req, res, next) => {
+    try {
+        const result = await Task.find().populate('createdBy', 'name usersname')
+        return res.status(200).json({ allTasks: result })
+    } catch (error) {
+        return next(error)
+    }
+}
+
+
+export const deleteTaskFn = async (req, res) => {
+    try {
+        const { taskId } = req.body
+
+        const result = await Task.deleteOne({ _id: taskId })
+
+        if (result.deletedCount === 0)
+            return res.status(404).json({ message: 'Task does not exist' })
+
+        return res.status(200).json({ message: 'Task deleted successfully' })
+
+    } catch (error) {
+        res.status(500).json({ message: error.message || 'Something went wrong while deleing the task' })
+    }
+}
+
+export const findTaskPostFn = async (req, res) => {
+
+    const { _id } = req.body
+
+    if (!_id) {
+        return res
+            .status(404)
+            .json({ message: '_id is needed for searching (edit task backend fn)' })
+    }
+
+    result = await Task.findById({ _id })
+    if (!result) {
+        return res
+            .status(404)
+            .json({ message: 'task does not exist' })
+    } else {
+
+        return res
+            .status(200)
+            .json({ data: result })
+    }
+
+}
+
+

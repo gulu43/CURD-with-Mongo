@@ -3,13 +3,13 @@ import mongoose, { Schema } from "mongoose";
 export const taskMemberSchema = new Schema(
     {
         taskId: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             ref: "Task",
             required: true
         },
 
         userId: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             required: true
         },
@@ -21,7 +21,7 @@ export const taskMemberSchema = new Schema(
         },
 
         addedBy: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             required: true
         }

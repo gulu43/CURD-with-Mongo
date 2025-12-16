@@ -3,7 +3,7 @@ import mongoose, { Schema } from "mongoose";
 export const taskCommentSchema = new Schema(
     {
         taskId: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             ref: "Task",
             required: true
         },
@@ -14,7 +14,7 @@ export const taskCommentSchema = new Schema(
         },
 
         commentedBy: {
-            type: Schema.Types.ObjectId,
+            type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             required: true
         },
