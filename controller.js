@@ -7,6 +7,7 @@ import { error } from "console";
 import bcrypt from "bcryptjs";
 // import { decode } from "punycode";
 import e from "cors";
+import path from "path";
 // how to db and collection code plz
 
 // dotenv.config({
@@ -526,7 +527,7 @@ export const createTaskFn = async (req, res) => {
 
     console.log('this are the values: ', title, description, priority, dueDate, createdBy);
     if (!title || !description || !priority || !dueDate || !createdBy) {
-        return res.status(404).json({ message: 'feilds should not be empty' })
+        return res.status(400).json({ message: 'feilds should not be empty' })
     }
 
     const result = await Task.create({
@@ -542,10 +543,35 @@ export const createTaskFn = async (req, res) => {
     })
     console.log('task result: ', result);
 
+    // 2️ Save Attachments (if any)
+    if (req.files && req.files.length > 0) {
+        const attachmentsData = req.files.map(file => ({
+            taskId: result._id,
+            fileName: file.filename,
+            fileExt: path.extname(file.originalname),
+            filePath: file.path,
+            uploadedBy: createdBy,
+            mimeType: file.mimetype,
+            fileSize: file.size
+        }));
+
+        const fileupload = await Attachment.insertMany(attachmentsData);
+        console.log('ok: ', fileupload);
+
+    }
+
     if (result) {
         return res.status(201).json({ message: 'Task Createds' })
 
     } else {
+        // Cleanup uploaded files if any
+        if (req.files && req.files.length > 0) {
+            req.files.forEach(file => {
+                if (fs.existsSync(file.path)) {
+                    fs.unlinkSync(file.path);
+                }
+            });
+        }
         return res.status(500).json({ message: 'error while creating data' })
     }
 
@@ -649,7 +675,7 @@ export const assignTaskFn = async (req, res) => {
             }
         }
         if (role === 'watcher') {
-            const exists = await Member.findOne({ taskId, userId ,role: 'watcher'})
+            const exists = await Member.findOne({ taskId, userId, role: 'watcher' })
             if (exists) {
                 return res.status(409).json({ message: 'Watcher already exists' });
             }

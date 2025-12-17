@@ -5,7 +5,8 @@ export const taskAttachmentSchema = new Schema(
         taskId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Task",
-            required: true
+            required: true,
+            index: true
         },
 
         fileName: {
@@ -27,6 +28,16 @@ export const taskAttachmentSchema = new Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             required: true
+        },
+
+        mimeType: {
+            type: String,
+            required: false
+        },
+
+        fileSize: {
+            type: Number,
+            required: false
         }
 
     },
