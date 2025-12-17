@@ -53,7 +53,7 @@ app.post('/createtask',checkAccessTokenMiddleware, allowedRoles('admin'), create
 app.get('/gettasks',checkAccessTokenMiddleware, allowedRoles('admin'), getTasksFn)
 app.delete('/deletetask', checkAccessTokenMiddleware, allowedRoles('admin'), deleteTaskFn)
 app.post('/gettaskspost', checkAccessTokenMiddleware, allowedRoles('admin'), findTaskPostFn)
-app.post('/allroleusers', checkAccessTokenMiddleware, allowedRoles('admin'), findUserForTaskFn)
+// app.get('/allusers', checkAccessTokenMiddleware, allowedRoles('admin'), findUserForTaskFn) using old api now finduserFn()
 app.post('/assigntask', checkAccessTokenMiddleware, allowedRoles('admin'), assignTaskFn)
 
 app.use((err, req, res, next) => {

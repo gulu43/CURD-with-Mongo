@@ -483,7 +483,7 @@ export const finduserPostFn = async (req, res) => {
 export const finduserFn = async (req, res) => {
 
     const { usersname, skip, limit } = req.query
-    console.log('what i am getting from users: ', usersname);
+    // console.log('what i am getting from users: ', usersname);
 
     // console.log("finduser api hit")
 
@@ -610,8 +610,7 @@ export const findUserForTaskFn = async (req, res) => {
     }
     try {
         const result = await User.find({
-            name: { $regex: `^${name}`, $options: 'i' },
-            role: 'user'
+            name: { $regex: `^${name}`, $options: 'i' }
         }).limit(20);
         // const result = await User.find({})
         if (!result) {
@@ -638,13 +637,22 @@ export const assignTaskFn = async (req, res) => {
         const { taskId, userId, role } = req.body;
         const addedBy = req.user.users_id;
 
-        if (!taskId || !userId || !addedBy) {
+        if (!taskId || !userId || !addedBy || !role) {
             return res.status(400).json({ message: 'Fields required' });
         }
 
-        const exists = await Member.findOne({ taskId, userId });
-        if (exists) {
-            return res.status(409).json({ message: 'User already assigned' });
+        if (role === 'assignee') {
+
+            const exists = await Member.findOne({ taskId, role: 'assignee' });
+            if (exists) {
+                return res.status(409).json({ message: 'Assignee already exists' });
+            }
+        }
+        if (role === 'watcher') {
+            const exists = await Member.findOne({ taskId, userId ,role: 'watcher'})
+            if (exists) {
+                return res.status(409).json({ message: 'Watcher already exists' });
+            }
         }
 
         await Member.create({
@@ -669,7 +677,7 @@ export const assignTaskFn = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({
-            message: 'Error while assigning task',error
+            message: 'Error while assigning task', error
         });
     }
 };

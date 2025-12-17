@@ -16,7 +16,7 @@ export const taskMemberSchema = new Schema(
 
         role: {
             type: String,
-            enum: ["owner", "assignee", "collaborator", "watcher"],
+            enum: ["assignee", "watcher"],
             default: "assignee"
         },
 
