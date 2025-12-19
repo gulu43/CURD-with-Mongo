@@ -38,7 +38,21 @@ export const taskAttachmentSchema = new Schema(
         fileSize: {
             type: Number,
             required: false
+        },
+        isImage: {
+            type: Boolean,
+            required: false
+        },
+        downloadUrl: {
+            type: String,
+            required: false
+        },
+        previewUrl: {
+            type: String,
+            required: false
         }
+
+
 
     },
     { timestamps: true }

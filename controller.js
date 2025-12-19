@@ -7,7 +7,8 @@ import { error } from "console";
 import bcrypt from "bcryptjs";
 // import { decode } from "punycode";
 import e from "cors";
-import path from "path";
+import path from 'node:path';
+import { ObjectId } from "mongodb";
 // how to db and collection code plz
 
 // dotenv.config({
@@ -708,3 +709,70 @@ export const assignTaskFn = async (req, res) => {
     }
 };
 
+export const getTasksDetailsFn = async (req, res) => {
+
+    const { id } = req.body
+
+    if (!id) {
+        return res.status(400).json({ message: 'Field required' });
+    }
+
+    try {
+        const task = await Task.findById(id)
+            .populate('createdBy', '_id name usersname')
+            .populate('updatedBy', '_id name usersname');
+
+        const attachments = await Attachment.find({ taskId: id })
+            .populate('uploadedBy', '_id name usersname')
+            .lean();
+
+        const members = await Member.find({ taskId: id })
+            .populate('userId', '_id name usersname')
+            .populate('addedBy', '_id name usersname');
+
+        // adding basevalue
+        console.log('base url: ', process.env.BASE_URL);
+
+        const resolvedPath = await attachments.map((file) => ({
+            ...file,
+            fileUrl: `${process.env.BASE_URL}/${file.filePath.replace(/\\/g, '/')}`
+        }))
+
+        // console.log('checking path: ', resolvedPath[0].filePath);
+        // console.log('checking url: ', resolvedPath[0].fileUrl);
+
+        return res.status(200)
+            .json({
+                task: task,
+                attachments: resolvedPath,
+                members: members
+            })
+
+    } catch (error) {
+    }
+}
+
+export const downloadAttachmentFn = async (req, res) => {
+
+    try {
+        console.log('doenloads hit=======================');
+        
+        const file = await Attachment.findById(req.params.id).lean();
+        if (!file) return res.status(404).send('File not found');
+
+        // const absolutePath = `${process.env.BASE_URL}/${file.filePath.replace(/\\/g, '/')}`;
+        const absolutePath1 = path.join(process.cwd(),file.filePath);
+        console.log('absolute: ----------------***-----------*****-----: ',absolutePath1);
+        
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename="${file.fileName}"`
+        );
+        res.setHeader('Content-Type', file.mimeType || 'application/octet-stream');
+
+        res.download(absolutePath1, file.fileName);
+
+    } catch (error) {
+        return next(error)
+    }
+}

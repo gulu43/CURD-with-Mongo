@@ -3,7 +3,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import { __dirname, publicPath } from './paths.utils.js'
 import conHelperFn, { con, User, RefreshToken } from './db_connection.js'
-import { deleteUserFn, finduserFn, refreshTokenFn, homeUserFn, insertUserFn, loginUserFn, updatePasswordFn, checkAccessTokenMiddleware, initialRequest, logoutFn, allowedRoles, updateUserFn, finduserPostFn, createTaskFn, getTasksFn, deleteTaskFn, findTaskPostFn, findUserForTaskFn, assignTaskFn } from './controller.js'
+import { deleteUserFn, finduserFn, refreshTokenFn, homeUserFn, insertUserFn, loginUserFn, updatePasswordFn, checkAccessTokenMiddleware, initialRequest, logoutFn, allowedRoles, updateUserFn, finduserPostFn, createTaskFn, getTasksFn, deleteTaskFn, findTaskPostFn, findUserForTaskFn, assignTaskFn, getTasksDetailsFn, downloadAttachmentFn } from './controller.js'
 import cookieParser from 'cookie-parser'
 import { upload } from './multer_.js'
 const app = express()
@@ -57,6 +57,8 @@ app.delete('/deletetask', checkAccessTokenMiddleware, allowedRoles('admin'), del
 app.post('/gettaskspost', checkAccessTokenMiddleware, allowedRoles('admin'), findTaskPostFn)
 // app.get('/allusers', checkAccessTokenMiddleware, allowedRoles('admin'), findUserForTaskFn) using old api now finduserFn()
 app.post('/assigntask', checkAccessTokenMiddleware, allowedRoles('admin'), assignTaskFn)
+app.post('/gettaskdetails', checkAccessTokenMiddleware, allowedRoles('admin'), getTasksDetailsFn)
+app.get('/attachments/download/:id', downloadAttachmentFn)
 
 app.use((err, req, res, next) => {
     console.error('Caught error:', err)
