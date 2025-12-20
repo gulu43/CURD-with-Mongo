@@ -27,20 +27,32 @@ export const taskCommentSchema = new Schema(
                         type: String,
                         required: true
                     },
-                    fileUrl: {
-                        type: String,
-                        required: true
-                    },
                     filePath: {
                         type: String,
                         required: true
+                    },
+                    mimeType: {
+                        type: String,
+                        required: false
+                    },
+                    fileExt: {
+                        type: String,
+                        required: true
+                    },
+                    fileUrl: {
+                        type: String,
+                        required: false
+                    },
+                    fileSize: {
+                        type: String,
+                        required: false
                     }
 
                 }
-            ]
+            ],
+            required: false
         }
     },
     { timestamps: true }
 );
 
-// export default mongoose.model("TaskComment", taskCommentSchema);

@@ -557,7 +557,7 @@ export const createTaskFn = async (req, res) => {
         }));
 
         const fileupload = await Attachment.insertMany(attachmentsData);
-        console.log('ok: ', fileupload);
+        // console.log('ok: ', fileupload);
 
     }
 
@@ -755,15 +755,15 @@ export const getTasksDetailsFn = async (req, res) => {
 export const downloadAttachmentFn = async (req, res) => {
 
     try {
-        console.log('doenloads hit=======================');
-        
+        // console.log('doenloads hit=======================');
+
         const file = await Attachment.findById(req.params.id).lean();
         if (!file) return res.status(404).send('File not found');
 
         // const absolutePath = `${process.env.BASE_URL}/${file.filePath.replace(/\\/g, '/')}`;
-        const absolutePath1 = path.join(process.cwd(),file.filePath);
-        console.log('absolute: ----------------***-----------*****-----: ',absolutePath1);
-        
+        const absolutePath1 = path.join(process.cwd(), file.filePath);
+        // console.log('absolute: ----------------***-----------*****-----: ',absolutePath1);
+
         res.setHeader(
             'Content-Disposition',
             `attachment; filename="${file.fileName}"`
@@ -775,4 +775,52 @@ export const downloadAttachmentFn = async (req, res) => {
     } catch (error) {
         return next(error)
     }
+}
+
+export const addCommentFn = async (req, res) => {
+
+    try {
+        const { taskId, message } = req.body;
+        const commentedBy = req.user.users_id;
+
+        let attachmentsData = [];
+        if (req.files && req.files.length > 3) {
+            return res.status(400).json({message: 'total 3 files can be send'})
+        }
+        
+        if (req.files && req.files.length > 0) {
+            attachmentsData = req.files.map(file => ({
+                fileName: file.originalname,
+                fileExt: path.extname(file.originalname),
+                filePath: file.path,
+                fileUrl: `${process.env.BASE_URL}/${file.path.replace(/\\/g, '/')}`,
+                mimeType: file.mimetype,
+                fileSize: file.size
+            }));
+        }
+
+        await Comment.create({
+            taskId,
+            message,
+            commentedBy,
+            ...(attachmentsData.length && { attachments: attachmentsData })
+        });
+
+        return res.status(201).json({ message: 'Comment Added' });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Error while creating comment' });
+    }
+};
+
+export const getAllCommentsFn = async (req, res) => {
+    console.log('comment hit ---------------');
+        
+    const { taskId } = req.body
+    if (!taskId) {
+        return res.status(401).json({'message': 'taskId is required'})
+    }
+    const result = await Comment.find({ taskId }).populate('commentedBy', '_id name usersname')
+    return res.status(200).json({ 'allcomments': result })
 }
