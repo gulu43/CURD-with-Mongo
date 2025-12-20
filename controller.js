@@ -582,7 +582,7 @@ export const createTaskFn = async (req, res) => {
 
 export const getTasksFn = async (req, res, next) => {
     try {
-        const result = await Task.find().populate('createdBy', 'name usersname')
+        const result = await Task.find().populate('createdBy', 'name usersname').sort({ createdAt: -1 })
         return res.status(200).json({ allTasks: result })
     } catch (error) {
         return next(error)
@@ -720,11 +720,13 @@ export const getTasksDetailsFn = async (req, res) => {
     try {
         const task = await Task.findById(id)
             .populate('createdBy', '_id name usersname')
-            .populate('updatedBy', '_id name usersname');
+            .populate('updatedBy', '_id name usersname')
+            .sort({ createdAt: -1 });
 
         const attachments = await Attachment.find({ taskId: id })
             .populate('uploadedBy', '_id name usersname')
-            .lean();
+            .lean()
+            .sort({ createdAt: -1 });
 
         const members = await Member.find({ taskId: id })
             .populate('userId', '_id name usersname')
@@ -752,12 +754,27 @@ export const getTasksDetailsFn = async (req, res) => {
     }
 }
 
-export const downloadAttachmentFn = async (req, res) => {
+export const downloadAttachmentFn = async (req, res, next) => {
 
     try {
+        const { id } = req.params;
         // console.log('doenloads hit=======================');
 
-        const file = await Attachment.findById(req.params.id).lean();
+        // in attachments collection
+        let file = await Attachment.findById(id).lean()
+
+        // 2. If not found, search inside comment attachments
+        if (!file) {
+            const comment = await Comment.findOne(
+                { 'attachments._id': id },
+                { 'attachments.$': 1 }
+            ).lean();
+
+            if (comment?.attachments?.length) {
+                file = comment.attachments[0];
+            }
+        }
+
         if (!file) return res.status(404).send('File not found');
 
         // const absolutePath = `${process.env.BASE_URL}/${file.filePath.replace(/\\/g, '/')}`;
@@ -784,10 +801,10 @@ export const addCommentFn = async (req, res) => {
         const commentedBy = req.user.users_id;
 
         let attachmentsData = [];
-        if (req.files && req.files.length > 3) {
-            return res.status(400).json({message: 'total 3 files can be send'})
+        if (req.files && req.files.length > 100) {
+            return res.status(400).json({ message: 'total 3 files can be send' })
         }
-        
+
         if (req.files && req.files.length > 0) {
             attachmentsData = req.files.map(file => ({
                 fileName: file.originalname,
@@ -815,12 +832,12 @@ export const addCommentFn = async (req, res) => {
 };
 
 export const getAllCommentsFn = async (req, res) => {
-    console.log('comment hit ---------------');
-        
+    // console.log('comment hit ---------------');
+
     const { taskId } = req.body
     if (!taskId) {
-        return res.status(401).json({'message': 'taskId is required'})
+        return res.status(401).json({ 'message': 'taskId is required' })
     }
-    const result = await Comment.find({ taskId }).populate('commentedBy', '_id name usersname')
+    const result = await Comment.find({ taskId }).populate('commentedBy', '_id name usersname').sort({ createdAt: -1 })
     return res.status(200).json({ 'allcomments': result })
 }

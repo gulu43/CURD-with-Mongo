@@ -51,7 +51,7 @@ app.post('/logout', checkAccessTokenMiddleware, logoutFn)
 app.delete('/deleteaccount', checkAccessTokenMiddleware, allowedRoles('admin'), deleteUserFn)
 app.get('/getuser', checkAccessTokenMiddleware, allowedRoles('admin'), finduserFn)
 app.post('/getuserpost', checkAccessTokenMiddleware, allowedRoles('admin'), finduserPostFn)
-app.post('/createtask', checkAccessTokenMiddleware, allowedRoles('admin'), upload.array('attachments', 10), createTaskFn)
+app.post('/createtask', checkAccessTokenMiddleware, allowedRoles('admin'), upload.array('attachments', 1000), createTaskFn)
 app.get('/gettasks', checkAccessTokenMiddleware, allowedRoles('admin'), getTasksFn)
 app.delete('/deletetask', checkAccessTokenMiddleware, allowedRoles('admin'), deleteTaskFn)
 app.post('/gettaskspost', checkAccessTokenMiddleware, allowedRoles('admin'), findTaskPostFn)
@@ -59,7 +59,7 @@ app.post('/gettaskspost', checkAccessTokenMiddleware, allowedRoles('admin'), fin
 app.post('/assigntask', checkAccessTokenMiddleware, allowedRoles('admin'), assignTaskFn)
 app.post('/gettaskdetails', checkAccessTokenMiddleware, allowedRoles('admin'), getTasksDetailsFn)
 app.get('/attachments/download/:id', checkAccessTokenMiddleware, allowedRoles('admin', 'user'), downloadAttachmentFn)
-app.post('/addcomment', checkAccessTokenMiddleware, allowedRoles('admin', 'user'), upload.array('attachments', 3), addCommentFn)
+app.post('/addcomment', checkAccessTokenMiddleware, allowedRoles('admin', 'user'), upload.array('attachments', 100), addCommentFn)
 app.post('/allcomments', checkAccessTokenMiddleware, allowedRoles('admin', 'user'), getAllCommentsFn)
 
 app.use((err, req, res, next) => {
