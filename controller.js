@@ -6,9 +6,11 @@ import dotenv from 'dotenv'
 import { error } from "console";
 import bcrypt from "bcryptjs";
 // import { decode } from "punycode";
-import e from "cors";
+import cors from "cors";
 import path from 'node:path';
 import { ObjectId } from "mongodb";
+import fs from 'node:fs'
+
 // how to db and collection code plz
 
 // dotenv.config({
@@ -616,16 +618,23 @@ export const findTaskPostFn = async (req, res) => {
             .json({ message: '_id is needed for searching (edit task backend fn)' })
     }
 
-    result = await Task.findById({ _id })
+    const result = await Task.findById({ _id })
+    const resultPic = await Attachment.find({ taskId: _id })
+
     if (!result) {
         return res
             .status(404)
             .json({ message: 'task does not exist' })
     } else {
 
+        if (!resultPic) {
+            return res
+                .status(200)
+                .json({ data: result })
+        }
         return res
             .status(200)
-            .json({ data: result })
+            .json({ data: result, files: resultPic })
     }
 
 }
@@ -840,4 +849,93 @@ export const getAllCommentsFn = async (req, res) => {
     }
     const result = await Comment.find({ taskId }).populate('commentedBy', '_id name usersname').sort({ createdAt: -1 })
     return res.status(200).json({ 'allcomments': result })
+}
+
+export const updateTaskFn = async (req, res) => {
+
+    let { _id, title, description, priority, dueDate, status, isAssigned, removedFileIds } = req.body
+
+    // console.log(req.user.users_id);
+    let updatedBy = req.user.users_id
+
+    console.log('this are the values: ', _id, title, description, priority, dueDate, status, updatedBy);
+    // console.log('val: ',isAssigned);
+
+    if (!_id || !title || !description || !priority || !dueDate || !status || !updatedBy ) {
+        return res.status(400).json({ message: 'feilds should not be empty' })
+    }
+
+
+    try {
+        const result = await Task.updateOne({ _id }, {
+            $set: {
+                title,
+                description,
+                priority,
+                dueDate,
+                status,
+                isAssigned,
+                updatedBy,
+            }
+        })
+        console.log('task updated: ', result);
+
+        // 2️ Save Attachments (if any)
+        if (req.files && req.files.length > 0) {
+            const attachmentsData = req.files.map(file => ({
+                taskId: _id,
+                fileName: file.filename,
+                fileExt: path.extname(file.originalname),
+                filePath: file.path,
+                uploadedBy: updatedBy,
+                mimeType: file.mimetype,
+                fileSize: file.size
+            }));
+
+            const fileupload = await Attachment.insertMany(attachmentsData);
+            // console.log('ok: ', fileupload);
+        }
+
+        // unlink file with if part
+        if (removedFileIds) {
+            const ids = removedFileIds
+                ? (Array.isArray(removedFileIds) ? removedFileIds : [removedFileIds])
+                : [];
+
+
+            for (const id of ids) {
+                const fileDoc = await Attachment.findById(id);
+
+                if (fileDoc) {
+                    // delete physical file
+                    if (fs.existsSync(fileDoc.filePath)) {
+                        fs.unlinkSync(fileDoc.filePath);
+                    }
+
+                    // delete DB record
+                    await Attachment.deleteOne({ _id: id });
+                }
+            }
+        }
+
+
+
+        if (result) {
+            return res.status(200).json({ message: 'Task updated successfully' });
+
+        } else {
+            // Cleanup uploaded files if any
+            if (req.files && req.files.length > 0) {
+                req.files.forEach(file => {
+                    if (fs.existsSync(file.path)) {
+                        fs.unlinkSync(file.path);
+                    }
+                });
+            }
+            return res.status(500).json({ message: 'error while updating data' })
+        }
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error while updating ' });
+    }
 }
