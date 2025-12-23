@@ -620,6 +620,35 @@ export const findTaskPostFn = async (req, res) => {
 
     const result = await Task.findById({ _id })
     const resultPic = await Attachment.find({ taskId: _id })
+    // console.log('resultPic================:', resultPic);
+
+    // comment attachment
+    const resultComentPicture = await Comment.find({ taskId: _id })
+    // console.log('resultComentPicture================:', resultComentPicture);
+
+    const commentFiles = [];
+    // .lean() also option
+    resultComentPicture.forEach(comment => {
+        if (comment.attachments && comment.attachments.length > 0) {
+            comment.attachments.forEach(att => {
+                commentFiles.push({
+                    ...att.toObject(),
+                    taskId: comment.taskId,
+                    commentId: comment._id
+                });
+            });
+        }
+    });
+
+    // let allFiles = [...resultPic,...commentFiles]
+
+    const allFiles = [
+        ...(Array.isArray(resultPic) ? resultPic : []),
+        ...(Array.isArray(commentFiles) ? commentFiles : [])
+    ];
+    console.log('all: ', allFiles);
+
+
 
     if (!result) {
         return res
@@ -627,14 +656,14 @@ export const findTaskPostFn = async (req, res) => {
             .json({ message: 'task does not exist' })
     } else {
 
-        if (!resultPic) {
+        if (allFiles == []) {
             return res
                 .status(200)
                 .json({ data: result })
         }
         return res
             .status(200)
-            .json({ data: result, files: resultPic })
+            .json({ data: result, files: allFiles })
     }
 
 }
@@ -861,10 +890,17 @@ export const updateTaskFn = async (req, res) => {
     console.log('this are the values: ', _id, title, description, priority, dueDate, status, updatedBy);
     // console.log('val: ',isAssigned);
 
-    if (!_id || !title || !description || !priority || !dueDate || !status || !updatedBy ) {
+    if (!_id || !title || !description || !priority || !dueDate || !status) {
         return res.status(400).json({ message: 'feilds should not be empty' })
     }
 
+    let normalizedIsAssigned;
+
+    if (isAssigned === 'true') {
+        normalizedIsAssigned = true
+    } else {
+        normalizedIsAssigned = false
+    }
 
     try {
         const result = await Task.updateOne({ _id }, {
@@ -874,11 +910,11 @@ export const updateTaskFn = async (req, res) => {
                 priority,
                 dueDate,
                 status,
-                isAssigned,
+                isAssigned: normalizedIsAssigned,
                 updatedBy,
             }
         })
-        console.log('task updated: ', result);
+        // console.log('task updated: ', result);
 
         // 2️ Save Attachments (if any)
         if (req.files && req.files.length > 0) {
@@ -897,28 +933,79 @@ export const updateTaskFn = async (req, res) => {
         }
 
         // unlink file with if part
+        // if (removedFileIds) {
+        //     const ids = removedFileIds
+        //         ? (Array.isArray(removedFileIds) ? removedFileIds : [removedFileIds])
+        //         : [];
+
+
+        //     for (const id of ids) {
+        //         const fileDoc = await Attachment.findById(id);
+
+        //         if (fileDoc) {
+        //             // delete physical file
+        //             if (fs.existsSync(fileDoc.filePath)) {
+        //                 fs.unlinkSync(fileDoc.filePath);
+        //             }
+
+        //             // delete DB record
+        //             await Attachment.deleteOne({ _id: id });
+        //             // comment one remaning
+        //         }
+        //     }
+        // }
+
+        let filesToRemove = [];
+
         if (removedFileIds) {
-            const ids = removedFileIds
-                ? (Array.isArray(removedFileIds) ? removedFileIds : [removedFileIds])
-                : [];
+            const rawFiles = Array.isArray(removedFileIds)
+                ? removedFileIds
+                : [removedFileIds];
 
+            filesToRemove = rawFiles.map(f => JSON.parse(f));
+        }
 
-            for (const id of ids) {
-                const fileDoc = await Attachment.findById(id);
+        for (const file of filesToRemove) {
+
+            /* =====================
+               TASK ATTACHMENTS
+            ====================== */
+            if (file.collec === 'task') {
+
+                const fileDoc = await Attachment.findById(file.id);
 
                 if (fileDoc) {
-                    // delete physical file
                     if (fs.existsSync(fileDoc.filePath)) {
                         fs.unlinkSync(fileDoc.filePath);
                     }
-
-                    // delete DB record
-                    await Attachment.deleteOne({ _id: id });
+                    await Attachment.deleteOne({ _id: file.id });
                 }
+            }
+
+            /* =====================
+               COMMENT ATTACHMENTS
+            ====================== */
+            if (file.collec === 'comment') {
+
+                const comment = await Comment.findById(file.commentId);
+                if (!comment) continue;
+
+                const attachment = comment.attachments.id(file.id);
+                if (!attachment) continue;
+
+                if (fs.existsSync(attachment.filePath)) {
+                    fs.unlinkSync(attachment.filePath);
+                }
+
+                comment.attachments.pull(file.id);
+                await comment.save();
             }
         }
 
 
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
 
         if (result) {
             return res.status(200).json({ message: 'Task updated successfully' });
