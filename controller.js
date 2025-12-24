@@ -25,7 +25,7 @@ let hashedPassword;
 // export const generateMethordFn = async (req, res) => {}
 
 export const initialRequest = async (req, res) => {
-    console.log('***initialRequest hit');
+    // console.log('***initialRequest hit');
 
     res.status(200).json({ message: 'ok!' })
 }
@@ -220,11 +220,11 @@ export const loginUserFn = async (req, res) => {
 //     // next()
 // }
 export function checkAccessTokenMiddleware(req, res, next) {
-    console.log('-------------------------------------------------------------------------------------');
-    console.log('middleware hit')
+    // console.log('-------------------------------------------------------------------------------------');
+    // console.log('middleware hit')
 
     const accessToken_ = req.headers.accesstoken;
-    console.log('in backend accessToken: ', accessToken_);
+    // console.log('in backend accessToken: ', accessToken_);
 
     if (!accessToken_) {
         return res.status(401).json({ message: "token not found" });
@@ -240,19 +240,19 @@ export function checkAccessTokenMiddleware(req, res, next) {
             return res.status(403).json({ message: "Invalid token" });
         }
 
-        console.log('AuthMiddleWare AccessToken Value: ', decode)
+        // console.log('AuthMiddleWare AccessToken Value: ', decode)
         req.user = decode;
-        console.log('AuthMiddleWare user values:', req.user);
+        // console.log('AuthMiddleWare user values:', req.user);
 
         next();
     });
-    console.log('-------------------------------------------------------------------------------------');
+    // console.log('-------------------------------------------------------------------------------------');
 }
 
 export function allowedRoles(...roles) {
     return (req, res, next) => {
-        console.log('Middleware Allowed Roles: ', roles)
-        console.log('users permission: ', req.user)
+        // console.log('Middleware Allowed Roles: ', roles)
+        // console.log('users permission: ', req.user)
 
         if (!roles.includes(req.user.role)) {
             return res.status(403).json({ message: 'Access denied' })
@@ -771,7 +771,7 @@ export const getTasksDetailsFn = async (req, res) => {
             .populate('addedBy', '_id name usersname');
 
         // adding basevalue
-        console.log('base url: ', process.env.BASE_URL);
+        // console.log('base url: ', process.env.BASE_URL);
 
         const resolvedPath = await attachments.map((file) => ({
             ...file,
