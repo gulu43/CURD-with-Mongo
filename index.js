@@ -3,7 +3,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import { __dirname, publicPath } from './paths.utils.js'
 import conHelperFn, { con, User, RefreshToken } from './db_connection.js'
-import { deleteUserFn, finduserFn, refreshTokenFn, homeUserFn, insertUserFn, loginUserFn, updatePasswordFn, checkAccessTokenMiddleware, initialRequest, logoutFn, allowedRoles, updateUserFn, finduserPostFn, createTaskFn, getTasksFn, deleteTaskFn, findTaskPostFn, findUserForTaskFn, assignTaskFn, getTasksDetailsFn, downloadAttachmentFn, addCommentFn, getAllCommentsFn, updateTaskFn } from './controller.js'
+import { deleteUserFn, finduserFn, refreshTokenFn, homeUserFn, insertUserFn, loginUserFn, updatePasswordFn, checkAccessTokenMiddleware, initialRequest, logoutFn, allowedRoles, updateUserFn, finduserPostFn, createTaskFn, getTasksFn, deleteTaskFn, findTaskPostFn, findUserForTaskFn, assignTaskFn, getTasksDetailsFn, downloadAttachmentFn, addCommentFn, getAllCommentsFn, updateTaskFn, updateCommentFn, deleteCommentFn } from './controller.js'
 import cookieParser from 'cookie-parser'
 import { upload } from './multer_.js'
 const app = express()
@@ -62,6 +62,8 @@ app.get('/attachments/download/:id', checkAccessTokenMiddleware, allowedRoles('a
 app.post('/addcomment', checkAccessTokenMiddleware, allowedRoles('admin', 'user'), upload.array('attachments', 100), addCommentFn)
 app.post('/allcomments', checkAccessTokenMiddleware, allowedRoles('admin', 'user'), getAllCommentsFn)
 app.patch('/updatetask', checkAccessTokenMiddleware, allowedRoles('admin'), upload.array('attachments', 100), updateTaskFn)
+app.patch('/updatecomment', checkAccessTokenMiddleware, allowedRoles('admin', 'user'), upload.array('attachments', 100), updateCommentFn)
+app.post('/deletecomment', checkAccessTokenMiddleware, allowedRoles('admin', 'user'), deleteCommentFn)
 
 app.use((err, req, res, next) => {
     console.error('Caught error:', err)

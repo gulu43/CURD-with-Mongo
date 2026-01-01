@@ -45,14 +45,14 @@ export const initialRequest = async (req, res) => {
 // }
 
 export const refreshTokenFn = async (req, res) => {
-    console.log('***refresh hit');
+    // console.log('***refresh hit');
     // console.log('req---: ', req);
     // console.log('header: ', req.headers.refreshtoken);
 
     try {
 
         const refreshtoken_ = req.headers.refreshtoken;
-        console.log('refreshToken: ', refreshtoken_)
+        // console.log('refreshToken: ', refreshtoken_)
 
         if (!refreshtoken_) return res.status(404).json({ message: 'refresh token not found, login again.' })
 
@@ -69,7 +69,7 @@ export const refreshTokenFn = async (req, res) => {
             else {
                 console.log('connection check', checkConnection(con))
                 result = await RefreshToken.findOne({ token: refreshtoken_ }).exec()
-                console.log('RefreshToken Found in col:- ', result.token);
+                // console.log('RefreshToken Found in col:- ', result.token);
 
                 // checking time
                 const expireTimeOfToken = new Date(result.expiryDate).getTime()
@@ -1026,3 +1026,96 @@ export const updateTaskFn = async (req, res) => {
         return res.status(500).json({ message: 'Internal server error while updating ' });
     }
 }
+
+export const updateCommentFn = async (req, res) => {
+    const { _id, message, removedAttachmentIds = [] } = req.body;
+
+    const comment = await Comment.findById(_id);
+    if (!comment) {
+        return res.status(404).json({ message: 'Comment not found' });
+    }
+
+    if (comment.commentedBy.toString() !== req.user.users_id) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    /* Remove existing attachments */
+    if (removedAttachmentIds.length > 0) {
+        const attachmentsToRemove = comment.attachments.filter(att =>
+            removedAttachmentIds.includes(att._id.toString())
+        );
+
+        attachmentsToRemove.forEach(att => {
+            if (fs.existsSync(att.filePath)) {
+                fs.unlinkSync(att.filePath);
+            }
+        });
+
+        await Comment.updateOne(
+            { _id },
+            {
+                $pull: {
+                    attachments: { _id: { $in: removedAttachmentIds } }
+                }
+            }
+        );
+    }
+
+    /* Add new attachments */
+    if (req.files?.length > 0) {
+        const filesArray = req.files.map(file => ({
+            fileName: file.filename,
+            fileExt: path.extname(file.originalname),
+            filePath: file.path,
+            uploadedBy: req.user.users_id,
+            mimeType: file.mimetype,
+            fileSize: file.size,
+            isImage: file.mimetype.startsWith('image/')
+        }));
+
+        await Comment.updateOne(
+            { _id },
+            { $push: { attachments: { $each: filesArray } } }
+        );
+    }
+
+    /* Update message */
+    await Comment.updateOne(
+        { _id },
+        { $set: { message } }
+    );
+
+    return res.status(200).json({ message: 'Comment updated successfully' });
+};
+
+export const deleteCommentFn = async (req, res) => {
+    const { _id } = req.body
+
+    const comment = await Comment.findById(_id);
+    if (!comment) {
+        return res.status(404).json({ message: 'Comment not found' });
+    }
+
+
+    if (comment.commentedBy.toString() !== req.user.users_id) {
+        return res.status(401).json({
+            message: 'A user can only delete their own comment'
+        });
+    }
+
+    // 
+    if (comment.attachments && comment.attachments.length > 0) {
+        comment.attachments.forEach(att => {
+            if (att.filePath && fs.existsSync(att.filePath)) {
+                fs.unlinkSync(att.filePath);
+            }
+        });
+    }
+
+    await Comment.findByIdAndDelete(_id);
+
+    return res.status(200).json({
+        message: 'Comment and attachments deleted successfully'
+    });
+
+};
