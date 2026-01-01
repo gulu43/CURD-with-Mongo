@@ -548,6 +548,7 @@ export const createTaskFn = async (req, res) => {
 
     // 2️ Save Attachments (if any)
     if (req.files && req.files.length > 0) {
+        
         const attachmentsData = req.files.map(file => ({
             taskId: result._id,
             fileName: file.filename,
@@ -555,7 +556,8 @@ export const createTaskFn = async (req, res) => {
             filePath: file.path,
             uploadedBy: createdBy,
             mimeType: file.mimetype,
-            fileSize: file.size
+            fileSize: file.size,
+            fileUrl: `${req.protocol}://${req.get('host')}/uploads/${file.filename}`
         }));
 
         const fileupload = await Attachment.insertMany(attachmentsData);
